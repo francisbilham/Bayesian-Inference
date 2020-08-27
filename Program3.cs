@@ -24,7 +24,7 @@ namespace Test
             {
                 double total;
                 double prior_prob_of_pair_related = 0.05; // prior probability for any pair being related
-                double transfer_related_factor = 0.8; // setting to 1.0 means that 12 related and 13 related implies 13 related, 0.0 means that 12 / 13 related are independent of 13 related
+                double transfer_related_factor = 0.8; // setting to 1.0 means that 12 related and 13 related implies 23 related, 0.0 means that 12 / 13 related are independent of 23 related
 
                 // a bunch of maths that relates to a 3 circle Venn diagram to compute the probability of the 8 outcomes for three relationships
                 double prob_all_related = transfer_related_factor * prior_prob_of_pair_related * prior_prob_of_pair_related + (1 - transfer_related_factor) * prior_prob_of_pair_related * prior_prob_of_pair_related * prior_prob_of_pair_related;
