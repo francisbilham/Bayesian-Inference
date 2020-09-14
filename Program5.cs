@@ -103,9 +103,12 @@ namespace Bayesian_Inference
                 IDictionary<string, Variable<int>> Roots = new Dictionary<string, Variable<int>>(); //dictionary of all root nodes.
 
 
+
+
                 double total;
                 double prior_prob_of_pair_related = 0.05; // prior probability for any pair being related
                 double transfer_related_factor = 0.8; // setting to 1.0 means that 12 related and 13 related implies 23 related, 0.0 means that 12 / 13 related are independent of 23 related
+
 
                 // a bunch of maths that relates to a 3 circle Venn diagram to compute the probability of the 8 outcomes for three relationships
                 double prob_all_related = transfer_related_factor * prior_prob_of_pair_related * prior_prob_of_pair_related + (1 - transfer_related_factor) * prior_prob_of_pair_related * prior_prob_of_pair_related * prior_prob_of_pair_related;
@@ -139,14 +142,17 @@ namespace Bayesian_Inference
                 }
 
 
+                //Variable<int> Jeff = Variable.New<int>().Named("Placeholder");
+                //Jeff.SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root"));
+
                 // run inference on 3 person sub-networks
                 for (int i = 0; i < personList.Count; i++)
                 {
-                    for (int j = 0; j < personList.Count; j++)
+                    for (int j = i + 1; j < personList.Count; j++)
                     {
                         if (personList[i] != personList[j])
                         {
-                            for (int k = 0; k < personList.Count; k++)
+                            for (int k = j + 1; k < personList.Count; k++)
                             {
                                 if ((personList[i] != personList[k]) & (personList[j] != personList[k]))
                                 {
@@ -165,181 +171,397 @@ namespace Bayesian_Inference
                                     }
 
 
-
                                     Related[i, j] = Variable.New<bool>();//.Named("Related" + ij);
                                     Related[i, k] = Variable.New<bool>();//.Named("Related" + ik);
                                     Related[j, k] = Variable.New<bool>();//.Named("Related" + jk);
+
+                                    Related[j, i] = Variable.New<bool>();//.Named("Related" + ij);
+                                    Related[k, i] = Variable.New<bool>();//.Named("Related" + ik);
+                                    Related[k, j] = Variable.New<bool>();//.Named("Related" + jk);
 
 
                                     Panui[i, j] = Variable.New<bool>();//.Named("Panui" + ij);
                                     Panui[i, k] = Variable.New<bool>();//.Named("Panui" + ik);
                                     Panui[j, k] = Variable.New<bool>();//.Named("Panui" + jk);
 
+                                    Panui[j, i] = Variable.New<bool>();//.Named("Panui" + ij);
+                                    Panui[k, i] = Variable.New<bool>();//.Named("Panui" + ik);
+                                    Panui[k, j] = Variable.New<bool>();//.Named("Panui" + jk);
+
 
                                     ShareTrans[i, j] = Variable.New<bool>();//.Named("ShareTrans" + ij);
                                     ShareTrans[i, k] = Variable.New<bool>();//.Named("ShareTrans" + ik);
                                     ShareTrans[j, k] = Variable.New<bool>();//.Named("ShareTrans" + jk);
+
+                                    ShareTrans[j, i] = Variable.New<bool>();//.Named("ShareTrans" + ij);
+                                    ShareTrans[k, i] = Variable.New<bool>();//.Named("ShareTrans" + ik);
+                                    ShareTrans[k, j] = Variable.New<bool>();//.Named("ShareTrans" + jk);
 
 
                                     NameScore[i, j] = Variable.New<double>();//.Named("NameScore" + ij);
                                     NameScore[i, k] = Variable.New<double>();//.Named("NameScore" + ik);
                                     NameScore[j, k] = Variable.New<double>();//.Named("NameScore" + jk);
 
+                                    NameScore[j, i] = Variable.New<double>();//.Named("NameScore" + ij);
+                                    NameScore[k, i] = Variable.New<double>();//.Named("NameScore" + ik);
+                                    NameScore[k, j] = Variable.New<double>();//.Named("NameScore" + jk);
+
+                                    //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                    for (int l = k + 1; l < personList.Count; l++)
+                                    {
+                                        string ijl = ij + l.ToString();
+                                        string ikl = ik + l.ToString();
+                                        string jkl = jk + l.ToString();
+
+                                        if (Roots.ContainsKey(ijl) == false)
+                                        {
+                                            Roots.Add(ijl, Variable.New<int>());
+                                        }
+
+                                        if (Roots.ContainsKey(ikl) == false)
+                                        {
+                                            Roots.Add(ikl, Variable.New<int>());
+                                        }
+
+                                        if (Roots.ContainsKey(jkl) == false)
+                                        {
+                                            Roots.Add(jkl, Variable.New<int>());
+                                        }
+                                    }
 
                                     using (Variable.If(Roots[ijk] == 0))
                                     {
+                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                        for (int l = k + 1; l < personList.Count; l++)
+                                        {
+                                            string ijl = ij + l.ToString();
+                                            string ikl = ik + l.ToString();
+                                            string jkl = jk + l.ToString();
 
+                                            if (Roots[ijl].IsDefined == false) 
+                                            {
+                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].Name = ("Root" + ijl);
+                                            }
+
+                                            if (Roots[ikl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].Name = ("Root" + ikl);
+                                            }
+
+                                            if (Roots[jkl].IsDefined == false)
+                                            {
+                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].Name = ("Root" + jkl);
+                                            }
+                                        }
 
                                         Related[i, j].SetTo(Variable.Bernoulli(0));
                                         Related[i, k].SetTo(Variable.Bernoulli(0));
                                         Related[j, k].SetTo(Variable.Bernoulli(0));
+
+                                        Related[j, i].SetTo(Variable.Bernoulli(0));
+                                        Related[k, i].SetTo(Variable.Bernoulli(0));
+                                        Related[k, j].SetTo(Variable.Bernoulli(0));
                                     }
 
                                     using (Variable.If(Roots[ijk] == 1))
                                     {
-                                        //if (Roots[ijl].IsDefined == false)
-                                        //{
-                                        //    Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1));
-                                        //}
+                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                        for (int l = k + 1; l < personList.Count; l++)
+                                        {
+                                            string ijl = ij + l.ToString();
+                                            string ikl = ik + l.ToString();
+                                            string jkl = jk + l.ToString();
+
+                                            if (Roots[ijl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
+                                                Roots[ijl].Name = ("Root" + ijl);
+                                            }
+
+                                            if (Roots[ikl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].Name = ("Root" + ikl);
+                                            }
+
+                                            if (Roots[jkl].IsDefined == false)
+                                            {
+                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].Name = ("Root" + jkl);
+                                            }
+                                        }
                                         Related[i, j].SetTo(Variable.Bernoulli(1));
                                         Related[i, k].SetTo(Variable.Bernoulli(0));
                                         Related[j, k].SetTo(Variable.Bernoulli(0));
+
+                                        Related[j, i].SetTo(Variable.Bernoulli(1));
+                                        Related[k, i].SetTo(Variable.Bernoulli(0));
+                                        Related[k, j].SetTo(Variable.Bernoulli(0));
                                     }
 
                                     using (Variable.If(Roots[ijk] == 2))
                                     {
-                                        //if (Roots[ijl].IsDefined == false)
-                                        //{
-                                        //    Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0));
-                                        //}
+                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                        for (int l = k + 1; l < personList.Count; l++)
+                                        {
+                                            string ijl = ij + l.ToString();
+                                            string ikl = ik + l.ToString();
+                                            string jkl = jk + l.ToString();
+
+                                            if (Roots[ijl].IsDefined == false) 
+                                            {
+                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].Name = ("Root" + ijl);
+                                            }
+
+                                            if (Roots[ikl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
+                                                Roots[ikl].Name = ("Root" + ikl);
+                                            }
+
+                                            if (Roots[jkl].IsDefined == false)
+                                            {
+                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].Name = ("Root" + jkl);
+                                            }
+                                        }
                                         Related[i, j].SetTo(Variable.Bernoulli(0));
                                         Related[i, k].SetTo(Variable.Bernoulli(1));
                                         Related[j, k].SetTo(Variable.Bernoulli(0));
+
+                                        Related[j, i].SetTo(Variable.Bernoulli(0));
+                                        Related[k, i].SetTo(Variable.Bernoulli(1));
+                                        Related[k, j].SetTo(Variable.Bernoulli(0));
                                     }
 
                                     using (Variable.If(Roots[ijk] == 3))
                                     {
-                                        //if (Roots[ijl].IsDefined == false)
-                                        //{
-                                        //    Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0));
-                                        //}
+                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                        for (int l = k + 1; l < personList.Count; l++)
+                                        {
+                                            string ijl = ij + l.ToString();
+                                            string ikl = ik + l.ToString();
+                                            string jkl = jk + l.ToString();
+
+                                            if (Roots[ijl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].Name = ("Root" + ijl);
+                                            }
+
+                                            if (Roots[ikl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].Name = ("Root" + ikl);
+                                            }
+
+                                            if (Roots[jkl].IsDefined == false)
+                                            {
+                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
+                                                Roots[jkl].Name = ("Root" + jkl);
+                                            }
+                                        }
                                         Related[i, j].SetTo(Variable.Bernoulli(0));
                                         Related[i, k].SetTo(Variable.Bernoulli(0));
                                         Related[j, k].SetTo(Variable.Bernoulli(1));
+
+                                        Related[j, i].SetTo(Variable.Bernoulli(0));
+                                        Related[k, i].SetTo(Variable.Bernoulli(0));
+                                        Related[k, j].SetTo(Variable.Bernoulli(1));
                                     }
 
                                     using (Variable.If(Roots[ijk] == 4))
                                     {
-                                        //if (Roots[ijl].IsDefined == false)
-                                        //{
-                                        //    Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1));
-                                        //}
+                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                        for (int l = k + 1; l < personList.Count; l++)
+                                        {
+                                            string ijl = ij + l.ToString();
+                                            string ikl = ik + l.ToString();
+                                            string jkl = jk + l.ToString();
+
+                                            if (Roots[ijl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
+                                                Roots[ijl].Name = ("Root" + ijl);
+                                            }
+
+                                            if (Roots[ikl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
+                                                Roots[ikl].Name = ("Root" + ikl);
+                                            }
+
+                                            if (Roots[jkl].IsDefined == false)
+                                            {
+                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].Name = ("Root" + jkl);
+                                            }
+                                        }
                                         Related[i, j].SetTo(Variable.Bernoulli(1));
                                         Related[i, k].SetTo(Variable.Bernoulli(1));
                                         Related[j, k].SetTo(Variable.Bernoulli(0));
+
+                                        Related[j, i].SetTo(Variable.Bernoulli(1));
+                                        Related[k, i].SetTo(Variable.Bernoulli(1));
+                                        Related[k, j].SetTo(Variable.Bernoulli(0));
                                     }
 
                                     using (Variable.If(Roots[ijk] == 5))
                                     {
-                                        //if (Roots[ijl].IsDefined == false)
-                                        //{
-                                        //    Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1));
-                                        //}
+                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                        for (int l = k + 1; l < personList.Count; l++)
+                                        {
+                                            string ijl = ij + l.ToString();
+                                            string ikl = ik + l.ToString();
+                                            string jkl = jk + l.ToString();
+
+                                            if (Roots[ijl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
+                                                Roots[ijl].Name = ("Root" + ijl);
+                                            }
+
+                                            if (Roots[ikl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].Name = ("Root" + ikl);
+                                            }
+
+                                            if (Roots[jkl].IsDefined == false)
+                                            {
+                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
+                                                Roots[jkl].Name = ("Root" + jkl);
+                                            }
+                                        }
                                         Related[i, j].SetTo(Variable.Bernoulli(1));
                                         Related[i, k].SetTo(Variable.Bernoulli(0));
                                         Related[j, k].SetTo(Variable.Bernoulli(1));
+
+                                        Related[j, i].SetTo(Variable.Bernoulli(1));
+                                        Related[k, i].SetTo(Variable.Bernoulli(0));
+                                        Related[k, j].SetTo(Variable.Bernoulli(1));
                                     }
 
                                     using (Variable.If(Roots[ijk] == 6))
                                     {
-                                        //if (Roots[ijl].IsDefined == false)
-                                        //{
-                                        //    Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0));
-                                        //}
+                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                        for (int l = k + 1; l < personList.Count; l++)
+                                        {
+                                            string ijl = ij + l.ToString();
+                                            string ikl = ik + l.ToString();
+                                            string jkl = jk + l.ToString();
+
+                                            if (Roots[ijl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].Name = ("Root" + ijl);
+                                            }
+
+                                            if (Roots[ikl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
+                                                Roots[ikl].Name = ("Root" + ikl);
+                                            }
+
+                                            if (Roots[jkl].IsDefined == false)
+                                            {
+                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
+                                                Roots[jkl].Name = ("Root" + jkl);
+                                            }
+                                        }
                                         Related[i, j].SetTo(Variable.Bernoulli(0));
                                         Related[i, k].SetTo(Variable.Bernoulli(1));
                                         Related[j, k].SetTo(Variable.Bernoulli(1));
+
+                                        Related[j, i].SetTo(Variable.Bernoulli(0));
+                                        Related[k, i].SetTo(Variable.Bernoulli(1));
+                                        Related[k, j].SetTo(Variable.Bernoulli(1));
                                     }
 
                                     using (Variable.If(Roots[ijk] == 7))
                                     {
-                                        //if (Roots[ijl].IsDefined == false)
-                                        //{
-                                        //    Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1));
-                                        //}
+                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                        for (int l = k + 1; l < personList.Count; l++)
+                                        {
+                                            string ijl = ij + l.ToString();
+                                            string ikl = ik + l.ToString();
+                                            string jkl = jk + l.ToString();
+
+                                            if (Roots[ijl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
+                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
+                                                Roots[ijl].Name = ("Root" + ijl);
+                                            }
+
+                                            if (Roots[ikl].IsDefined == false)
+                                            {
+                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
+                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
+                                                Roots[ikl].Name = ("Root" + ikl);
+                                            }
+
+                                            if (Roots[jkl].IsDefined == false)
+                                            {
+                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
+                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
+                                                Roots[jkl].Name = ("Root" + jkl);
+                                            }
+                                        }
                                         Related[i, j].SetTo(Variable.Bernoulli(1));
                                         Related[i, k].SetTo(Variable.Bernoulli(1));
                                         Related[j, k].SetTo(Variable.Bernoulli(1));
+
+                                        Related[j, i].SetTo(Variable.Bernoulli(1));
+                                        Related[k, i].SetTo(Variable.Bernoulli(1));
+                                        Related[k, j].SetTo(Variable.Bernoulli(1));
                                     }
 
-/*                                        using (Variable.If(Roots[ijl] == 0))
-                                    {
-                                        Related[i, j].SetTo(Variable.Bernoulli(0));
-                                        Related[i, l].SetTo(Variable.Bernoulli(0));
-                                        Related[j, l].SetTo(Variable.Bernoulli(0));
-                                    }
-
-                                    using (Variable.If(Roots[ijl] == 1))
-                                    {
-                                        Related[i, j].SetTo(Variable.Bernoulli(1));
-                                        Related[i, l].SetTo(Variable.Bernoulli(0));
-                                        Related[j, l].SetTo(Variable.Bernoulli(0));
-                                    }
-
-                                    using (Variable.If(Roots[ijl] == 2))
-                                    {
-                                        Related[i, j].SetTo(Variable.Bernoulli(0));
-                                        Related[i, l].SetTo(Variable.Bernoulli(1));
-                                        Related[j, l].SetTo(Variable.Bernoulli(0));
-                                    }
-
-                                    using (Variable.If(Roots[ijl] == 3))
-                                    {
-                                        Related[i, j].SetTo(Variable.Bernoulli(0));
-                                        Related[i, l].SetTo(Variable.Bernoulli(0));
-                                        Related[j, l].SetTo(Variable.Bernoulli(1));
-                                    }
-
-                                    using (Variable.If(Roots[ijl] == 4))
-                                    {
-                                        Related[i, j].SetTo(Variable.Bernoulli(1));
-                                        Related[i, l].SetTo(Variable.Bernoulli(1));
-                                        Related[j, l].SetTo(Variable.Bernoulli(0));
-                                    }
-
-                                    using (Variable.If(Roots[ijl] == 5))
-                                    {
-                                        Related[i, j].SetTo(Variable.Bernoulli(1));
-                                        Related[i, l].SetTo(Variable.Bernoulli(0));
-                                        Related[j, l].SetTo(Variable.Bernoulli(1));
-                                    }
-
-                                    using (Variable.If(Roots[ijl] == 6))
-                                    {
-                                        Related[i, j].SetTo(Variable.Bernoulli(0));
-                                        Related[i, l].SetTo(Variable.Bernoulli(1));
-                                        Related[j, l].SetTo(Variable.Bernoulli(1));
-                                    }
-
-                                    using (Variable.If(Roots[ijl] == 7))
-                                    {
-                                        Related[i, j].SetTo(Variable.Bernoulli(1));
-                                        Related[i, l].SetTo(Variable.Bernoulli(1));
-                                        Related[j, l].SetTo(Variable.Bernoulli(1));
-                                    }
-*/
 
                                     using (Variable.If(Related[i, j]))
                                     {
                                         Panui[i, j].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[i, j].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[i, j].SetTo(Variable.Beta(2.0, 5.0));
+
+                                        Panui[j, i].SetTo(Variable.Bernoulli(0.7));
+                                        ShareTrans[j, i].SetTo(Variable.Bernoulli(0.8));
+                                        NameScore[j, i].SetTo(Variable.Beta(2.0, 5.0));
                                     }
                                     using (Variable.IfNot(Related[i, j]))
                                     {
                                         Panui[i, j].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[i, j].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[i, j].SetTo(Variable.Beta(5.0, 2.0));
+
+                                        Panui[j, i].SetTo(Variable.Bernoulli(0.2));
+                                        ShareTrans[j, i].SetTo(Variable.Bernoulli(0.01));
+                                        NameScore[j, i].SetTo(Variable.Beta(5.0, 2.0));
                                     }
 
 
@@ -348,12 +570,20 @@ namespace Bayesian_Inference
                                         Panui[i, k].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[i, k].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[i, k].SetTo(Variable.Beta(2.0, 5.0));
+
+                                        Panui[k, i].SetTo(Variable.Bernoulli(0.7));
+                                        ShareTrans[k, i].SetTo(Variable.Bernoulli(0.8));
+                                        NameScore[k, i].SetTo(Variable.Beta(2.0, 5.0));
                                     }
                                     using (Variable.IfNot(Related[i, k]))
                                     {
                                         Panui[i, k].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[i, k].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[i, k].SetTo(Variable.Beta(5.0, 2.0));
+
+                                        Panui[k, i].SetTo(Variable.Bernoulli(0.2));
+                                        ShareTrans[k, i].SetTo(Variable.Bernoulli(0.01));
+                                        NameScore[k, i].SetTo(Variable.Beta(5.0, 2.0));
                                     }
 
 
@@ -362,41 +592,22 @@ namespace Bayesian_Inference
                                         Panui[j, k].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[j, k].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[j, k].SetTo(Variable.Beta(2.0, 5.0));
+
+                                        Panui[k, j].SetTo(Variable.Bernoulli(0.7));
+                                        ShareTrans[k, j].SetTo(Variable.Bernoulli(0.8));
+                                        NameScore[k, j].SetTo(Variable.Beta(2.0, 5.0));
                                     }
                                     using (Variable.IfNot(Related[j, k]))
                                     {
                                         Panui[j, k].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[j, k].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[j, k].SetTo(Variable.Beta(5.0, 2.0));
+
+                                        Panui[k, j].SetTo(Variable.Bernoulli(0.2));
+                                        ShareTrans[k, j].SetTo(Variable.Bernoulli(0.01));
+                                        NameScore[k, j].SetTo(Variable.Beta(5.0, 2.0));
                                     }
 
-                                    //using (Variable.If(Related[i, l]))
-                                    //{
-                                    //    Panui[i, l].SetTo(Variable.Bernoulli(0.7));
-                                    //    ShareTrans[i, l].SetTo(Variable.Bernoulli(0.8));
-                                    //    NameScore[i, l].SetTo(Variable.Beta(2.0, 5.0));
-                                    //}
-                                    //using (Variable.IfNot(Related[i, l]))
-                                    //{
-                                    //    Panui[i, l].SetTo(Variable.Bernoulli(0.2));
-                                    //    ShareTrans[i, l].SetTo(Variable.Bernoulli(0.01));
-                                    //    NameScore[i, l].SetTo(Variable.Beta(5.0, 2.0));
-                                    //}
-
-                                    //using (Variable.If(Related[j, l]))
-                                    //{
-                                    //    Panui[j, l].SetTo(Variable.Bernoulli(0.7));
-                                    //    ShareTrans[j, l].SetTo(Variable.Bernoulli(0.8));
-                                    //    NameScore[j, l].SetTo(Variable.Beta(2.0, 5.0));
-                                    //}
-                                    //using (Variable.IfNot(Related[j, l]))
-                                    //{
-                                    //    Panui[j, l].SetTo(Variable.Bernoulli(0.2));
-                                    //    ShareTrans[j, l].SetTo(Variable.Bernoulli(0.01));
-                                    //    NameScore[j, l].SetTo(Variable.Beta(5.0, 2.0));
-                                    //        }
-                                    //    }
-                                    //}
 
                                 }
                             }
