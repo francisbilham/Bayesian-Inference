@@ -17,6 +17,7 @@ namespace Bayesian_Inference
         {
             void Run()
             {
+                /////////////////////////////////////////// LOADING IN NETWORK DATA ///////////////////////////////
                 Person JR = new Person("Joe Rokocoko");
                 Person JsR = new Person("Josevata Rokocoko");
                 Person SS = new Person("Sitiveni Sivivatu");
@@ -94,16 +95,17 @@ namespace Bayesian_Inference
                         }
                     }
                 }
+                ///////////////////////////////// FINISHED LOADING IN NETWORK DATA //////////////////////////////////
 
+                // Setting up arrays and dictionary. Each array is n by n (n being the amount of people in the network) and the elements correspond to 
+                // a relationship ([1,2] is relates to relationship12) and so each element stores the status of the attribute in the corresponding relationship
+                // e.g Panui[1,2] = true means people 1 and 2 appear in a panui application together.
                 int n = personList.Count;
                 Variable<bool>[,] Panui = new Variable<bool>[n, n];
                 Variable<bool>[,] ShareTrans = new Variable<bool>[n, n];
                 Variable<double>[,] NameScore = new Variable<double>[n, n];
                 Variable<bool>[,] Related = new Variable<bool>[n, n];
-                IDictionary<string, Variable<int>> Roots = new Dictionary<string, Variable<int>>(); //dictionary of all root nodes.
-
-
-
+                IDictionary<string, Variable<int>> Roots = new Dictionary<string, Variable<int>>(); //dictionary of the triple nodes.
 
                 double total;
                 double prior_prob_of_pair_related = 0.05; // prior probability for any pair being related
@@ -141,11 +143,8 @@ namespace Bayesian_Inference
                     probs_first_pair_set_1[i] /= total;
                 }
 
-
-                //Variable<int> Jeff = Variable.New<int>().Named("Placeholder");
-                //Jeff.SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root"));
-
-                // run inference on 3 person sub-networks
+                // run inference on 3 person sub-networks. Loops over i from 0 to n, then j from i + 1 to n, then k from j + 1 to n. Since the matrices we 
+                // store data in are symmetrical, we can do this as long as we make sure all the operations for ij are applied to ji too.
                 for (int i = 0; i < personList.Count; i++)
                 {
                     for (int j = i + 1; j < personList.Count; j++)
@@ -156,63 +155,59 @@ namespace Bayesian_Inference
                             {
                                 if ((personList[i] != personList[k]) & (personList[j] != personList[k]))
                                 {
-
+                                    // strings of the indices
                                     string ij = i.ToString() + j.ToString();
                                     string ik = i.ToString() + k.ToString();
                                     string jk = j.ToString() + k.ToString();
-
-
                                     string ijk = i.ToString() + j.ToString() + k.ToString();
 
-
+                                    // if the triple is not already linked in the network, then create it
                                     if (Roots.ContainsKey(ijk) == false)
                                     {
                                         Roots.Add(ijk, Variable.Discrete(probs).Named("Root" + ijk));
                                     }
 
+                                    // initialising variables in related array 
+                                    Related[i, j] = Variable.New<bool>();
+                                    Related[i, k] = Variable.New<bool>();
+                                    Related[j, k] = Variable.New<bool>();
+                                    Related[j, i] = Variable.New<bool>();
+                                    Related[k, i] = Variable.New<bool>();
+                                    Related[k, j] = Variable.New<bool>();
 
-                                    Related[i, j] = Variable.New<bool>();//.Named("Related" + ij);
-                                    Related[i, k] = Variable.New<bool>();//.Named("Related" + ik);
-                                    Related[j, k] = Variable.New<bool>();//.Named("Related" + jk);
+                                    // initialising variables in panui array 
+                                    Panui[i, j] = Variable.New<bool>();
+                                    Panui[i, k] = Variable.New<bool>();
+                                    Panui[j, k] = Variable.New<bool>();
+                                    Panui[j, i] = Variable.New<bool>();
+                                    Panui[k, i] = Variable.New<bool>();
+                                    Panui[k, j] = Variable.New<bool>();
 
-                                    Related[j, i] = Variable.New<bool>();//.Named("Related" + ij);
-                                    Related[k, i] = Variable.New<bool>();//.Named("Related" + ik);
-                                    Related[k, j] = Variable.New<bool>();//.Named("Related" + jk);
+                                    // initialising variables in share transfer array
+                                    ShareTrans[i, j] = Variable.New<bool>();
+                                    ShareTrans[i, k] = Variable.New<bool>();
+                                    ShareTrans[j, k] = Variable.New<bool>();
+                                    ShareTrans[j, i] = Variable.New<bool>();
+                                    ShareTrans[k, i] = Variable.New<bool>();
+                                    ShareTrans[k, j] = Variable.New<bool>();
 
+                                    // initialising variables in name score array
+                                    NameScore[i, j] = Variable.New<double>();
+                                    NameScore[i, k] = Variable.New<double>();
+                                    NameScore[j, k] = Variable.New<double>();
+                                    NameScore[j, i] = Variable.New<double>();
+                                    NameScore[k, i] = Variable.New<double>();
+                                    NameScore[k, j] = Variable.New<double>();
 
-                                    Panui[i, j] = Variable.New<bool>();//.Named("Panui" + ij);
-                                    Panui[i, k] = Variable.New<bool>();//.Named("Panui" + ik);
-                                    Panui[j, k] = Variable.New<bool>();//.Named("Panui" + jk);
-
-                                    Panui[j, i] = Variable.New<bool>();//.Named("Panui" + ij);
-                                    Panui[k, i] = Variable.New<bool>();//.Named("Panui" + ik);
-                                    Panui[k, j] = Variable.New<bool>();//.Named("Panui" + jk);
-
-
-                                    ShareTrans[i, j] = Variable.New<bool>();//.Named("ShareTrans" + ij);
-                                    ShareTrans[i, k] = Variable.New<bool>();//.Named("ShareTrans" + ik);
-                                    ShareTrans[j, k] = Variable.New<bool>();//.Named("ShareTrans" + jk);
-
-                                    ShareTrans[j, i] = Variable.New<bool>();//.Named("ShareTrans" + ij);
-                                    ShareTrans[k, i] = Variable.New<bool>();//.Named("ShareTrans" + ik);
-                                    ShareTrans[k, j] = Variable.New<bool>();//.Named("ShareTrans" + jk);
-
-
-                                    NameScore[i, j] = Variable.New<double>();//.Named("NameScore" + ij);
-                                    NameScore[i, k] = Variable.New<double>();//.Named("NameScore" + ik);
-                                    NameScore[j, k] = Variable.New<double>();//.Named("NameScore" + jk);
-
-                                    NameScore[j, i] = Variable.New<double>();//.Named("NameScore" + ij);
-                                    NameScore[k, i] = Variable.New<double>();//.Named("NameScore" + ik);
-                                    NameScore[k, j] = Variable.New<double>();//.Named("NameScore" + jk);
-
-                                    //for loop which goes over adjacent nodes and sets distribution based on result of this root node
+                                    //for loop which goes over adjacent triples and sets distribution based on result of this root triple
                                     for (int l = k + 1; l < personList.Count; l++)
                                     {
+                                        //strings of all adjacent triples
                                         string ijl = ij + l.ToString();
                                         string ikl = ik + l.ToString();
                                         string jkl = jk + l.ToString();
 
+                                        //create all triples that don't already exist in the bayesian network
                                         if (Roots.ContainsKey(ijl) == false)
                                         {
                                             Roots.Add(ijl, Variable.New<int>());
@@ -238,32 +233,28 @@ namespace Bayesian_Inference
                                             string ikl = ik + l.ToString();
                                             string jkl = jk + l.ToString();
 
+                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
                                             if (Roots[ijl].IsDefined == false) 
                                             {
-                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
                                             }
-
                                             if (Roots[ikl].IsDefined == false)
                                             {
-                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].Name = ("Root" + ikl);
                                             }
-
                                             if (Roots[jkl].IsDefined == false)
                                             {
-                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].Name = ("Root" + jkl);
                                             }
                                         }
 
+                                        // set variables bernoulli distribution based on this triples outcome
                                         Related[i, j].SetTo(Variable.Bernoulli(0));
                                         Related[i, k].SetTo(Variable.Bernoulli(0));
                                         Related[j, k].SetTo(Variable.Bernoulli(0));
-
                                         Related[j, i].SetTo(Variable.Bernoulli(0));
                                         Related[k, i].SetTo(Variable.Bernoulli(0));
                                         Related[k, j].SetTo(Variable.Bernoulli(0));
@@ -278,31 +269,28 @@ namespace Bayesian_Inference
                                             string ikl = ik + l.ToString();
                                             string jkl = jk + l.ToString();
 
+                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
                                             if (Roots[ijl].IsDefined == false)
                                             {
-                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
                                             }
-
                                             if (Roots[ikl].IsDefined == false)
                                             {
-                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].Name = ("Root" + ikl);
                                             }
-
                                             if (Roots[jkl].IsDefined == false)
                                             {
-                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].Name = ("Root" + jkl);
                                             }
                                         }
+
+                                        // set variables bernoulli distribution based on this triples outcome
                                         Related[i, j].SetTo(Variable.Bernoulli(1));
                                         Related[i, k].SetTo(Variable.Bernoulli(0));
                                         Related[j, k].SetTo(Variable.Bernoulli(0));
-
                                         Related[j, i].SetTo(Variable.Bernoulli(1));
                                         Related[k, i].SetTo(Variable.Bernoulli(0));
                                         Related[k, j].SetTo(Variable.Bernoulli(0));
@@ -317,31 +305,28 @@ namespace Bayesian_Inference
                                             string ikl = ik + l.ToString();
                                             string jkl = jk + l.ToString();
 
+                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
                                             if (Roots[ijl].IsDefined == false) 
                                             {
-                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
                                             }
-
                                             if (Roots[ikl].IsDefined == false)
                                             {
-                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
                                                 Roots[ikl].Name = ("Root" + ikl);
                                             }
-
                                             if (Roots[jkl].IsDefined == false)
                                             {
-                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].Name = ("Root" + jkl);
                                             }
                                         }
+
+                                        // set variables bernoulli distribution based on this triples outcome
                                         Related[i, j].SetTo(Variable.Bernoulli(0));
                                         Related[i, k].SetTo(Variable.Bernoulli(1));
                                         Related[j, k].SetTo(Variable.Bernoulli(0));
-
                                         Related[j, i].SetTo(Variable.Bernoulli(0));
                                         Related[k, i].SetTo(Variable.Bernoulli(1));
                                         Related[k, j].SetTo(Variable.Bernoulli(0));
@@ -355,32 +340,28 @@ namespace Bayesian_Inference
                                             string ijl = ij + l.ToString();
                                             string ikl = ik + l.ToString();
                                             string jkl = jk + l.ToString();
-
+                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
                                             if (Roots[ijl].IsDefined == false)
                                             {
-                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
                                             }
-
                                             if (Roots[ikl].IsDefined == false)
                                             {
-                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].Name = ("Root" + ikl);
                                             }
-
                                             if (Roots[jkl].IsDefined == false)
                                             {
-                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
                                                 Roots[jkl].Name = ("Root" + jkl);
                                             }
                                         }
+
+                                        // set variables bernoulli distribution based on this triples outcome
                                         Related[i, j].SetTo(Variable.Bernoulli(0));
                                         Related[i, k].SetTo(Variable.Bernoulli(0));
                                         Related[j, k].SetTo(Variable.Bernoulli(1));
-
                                         Related[j, i].SetTo(Variable.Bernoulli(0));
                                         Related[k, i].SetTo(Variable.Bernoulli(0));
                                         Related[k, j].SetTo(Variable.Bernoulli(1));
@@ -395,31 +376,28 @@ namespace Bayesian_Inference
                                             string ikl = ik + l.ToString();
                                             string jkl = jk + l.ToString();
 
+                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
                                             if (Roots[ijl].IsDefined == false)
                                             {
-                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
                                             }
-
                                             if (Roots[ikl].IsDefined == false)
                                             {
-                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
                                                 Roots[ikl].Name = ("Root" + ikl);
                                             }
-
                                             if (Roots[jkl].IsDefined == false)
                                             {
-                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].Name = ("Root" + jkl);
                                             }
                                         }
+
+                                        // set variables bernoulli distribution based on this triples outcome
                                         Related[i, j].SetTo(Variable.Bernoulli(1));
                                         Related[i, k].SetTo(Variable.Bernoulli(1));
                                         Related[j, k].SetTo(Variable.Bernoulli(0));
-
                                         Related[j, i].SetTo(Variable.Bernoulli(1));
                                         Related[k, i].SetTo(Variable.Bernoulli(1));
                                         Related[k, j].SetTo(Variable.Bernoulli(0));
@@ -434,31 +412,28 @@ namespace Bayesian_Inference
                                             string ikl = ik + l.ToString();
                                             string jkl = jk + l.ToString();
 
+                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
                                             if (Roots[ijl].IsDefined == false)
                                             {
-                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
                                             }
-
                                             if (Roots[ikl].IsDefined == false)
                                             {
-                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].Name = ("Root" + ikl);
                                             }
-
                                             if (Roots[jkl].IsDefined == false)
                                             {
-                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
                                                 Roots[jkl].Name = ("Root" + jkl);
                                             }
                                         }
+
+                                        // set variables bernoulli distribution based on this triples outcome
                                         Related[i, j].SetTo(Variable.Bernoulli(1));
                                         Related[i, k].SetTo(Variable.Bernoulli(0));
                                         Related[j, k].SetTo(Variable.Bernoulli(1));
-
                                         Related[j, i].SetTo(Variable.Bernoulli(1));
                                         Related[k, i].SetTo(Variable.Bernoulli(0));
                                         Related[k, j].SetTo(Variable.Bernoulli(1));
@@ -473,31 +448,28 @@ namespace Bayesian_Inference
                                             string ikl = ik + l.ToString();
                                             string jkl = jk + l.ToString();
 
+                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
                                             if (Roots[ijl].IsDefined == false)
                                             {
-                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
                                             }
-
                                             if (Roots[ikl].IsDefined == false)
                                             {
-                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
                                                 Roots[ikl].Name = ("Root" + ikl);
                                             }
-
                                             if (Roots[jkl].IsDefined == false)
                                             {
-                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
                                                 Roots[jkl].Name = ("Root" + jkl);
                                             }
                                         }
+
+                                        // set variables bernoulli distribution based on this triples outcome
                                         Related[i, j].SetTo(Variable.Bernoulli(0));
                                         Related[i, k].SetTo(Variable.Bernoulli(1));
                                         Related[j, k].SetTo(Variable.Bernoulli(1));
-
                                         Related[j, i].SetTo(Variable.Bernoulli(0));
                                         Related[k, i].SetTo(Variable.Bernoulli(1));
                                         Related[k, j].SetTo(Variable.Bernoulli(1));
@@ -512,31 +484,28 @@ namespace Bayesian_Inference
                                             string ikl = ik + l.ToString();
                                             string jkl = jk + l.ToString();
 
+                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
                                             if (Roots[ijl].IsDefined == false)
                                             {
-                                                //Roots.Add(ijl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
                                             }
-
                                             if (Roots[ikl].IsDefined == false)
                                             {
-                                                //Roots.Add(ikl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
                                                 Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
                                                 Roots[ikl].Name = ("Root" + ikl);
                                             }
-
                                             if (Roots[jkl].IsDefined == false)
                                             {
-                                                //Roots.Add(jkl, Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
                                                 Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
                                                 Roots[jkl].Name = ("Root" + jkl);
                                             }
                                         }
+
+                                        // set variables bernoulli distribution based on this triples outcome
                                         Related[i, j].SetTo(Variable.Bernoulli(1));
                                         Related[i, k].SetTo(Variable.Bernoulli(1));
                                         Related[j, k].SetTo(Variable.Bernoulli(1));
-
                                         Related[j, i].SetTo(Variable.Bernoulli(1));
                                         Related[k, i].SetTo(Variable.Bernoulli(1));
                                         Related[k, j].SetTo(Variable.Bernoulli(1));
@@ -548,7 +517,6 @@ namespace Bayesian_Inference
                                         Panui[i, j].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[i, j].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[i, j].SetTo(Variable.Beta(2.0, 5.0));
-
                                         Panui[j, i].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[j, i].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[j, i].SetTo(Variable.Beta(2.0, 5.0));
@@ -558,19 +526,16 @@ namespace Bayesian_Inference
                                         Panui[i, j].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[i, j].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[i, j].SetTo(Variable.Beta(5.0, 2.0));
-
                                         Panui[j, i].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[j, i].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[j, i].SetTo(Variable.Beta(5.0, 2.0));
                                     }
-
 
                                     using (Variable.If(Related[i, k]))
                                     {
                                         Panui[i, k].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[i, k].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[i, k].SetTo(Variable.Beta(2.0, 5.0));
-
                                         Panui[k, i].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[k, i].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[k, i].SetTo(Variable.Beta(2.0, 5.0));
@@ -580,19 +545,16 @@ namespace Bayesian_Inference
                                         Panui[i, k].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[i, k].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[i, k].SetTo(Variable.Beta(5.0, 2.0));
-
                                         Panui[k, i].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[k, i].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[k, i].SetTo(Variable.Beta(5.0, 2.0));
                                     }
-
 
                                     using (Variable.If(Related[j, k]))
                                     {
                                         Panui[j, k].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[j, k].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[j, k].SetTo(Variable.Beta(2.0, 5.0));
-
                                         Panui[k, j].SetTo(Variable.Bernoulli(0.7));
                                         ShareTrans[k, j].SetTo(Variable.Bernoulli(0.8));
                                         NameScore[k, j].SetTo(Variable.Beta(2.0, 5.0));
@@ -602,7 +564,6 @@ namespace Bayesian_Inference
                                         Panui[j, k].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[j, k].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[j, k].SetTo(Variable.Beta(5.0, 2.0));
-
                                         Panui[k, j].SetTo(Variable.Bernoulli(0.2));
                                         ShareTrans[k, j].SetTo(Variable.Bernoulli(0.01));
                                         NameScore[k, j].SetTo(Variable.Beta(5.0, 2.0));
