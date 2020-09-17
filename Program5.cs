@@ -106,6 +106,7 @@ namespace Bayesian_Inference
                 Variable<double>[,] NameScore = new Variable<double>[n, n];
                 Variable<bool>[,] Related = new Variable<bool>[n, n];
                 IDictionary<string, Variable<int>> Roots = new Dictionary<string, Variable<int>>(); //dictionary of the triple nodes.
+                IDictionary<string, Tuple<int, string, string, string>> RootInfo = new Dictionary<string, Tuple<int, string, string, string>>();
 
                 double total;
                 double prior_prob_of_pair_related = 0.05; // prior probability for any pair being related
@@ -191,6 +192,7 @@ namespace Bayesian_Inference
                                     if (Roots.ContainsKey(ijk) == false)
                                     {
                                         Roots.Add(ijk, Variable.Discrete(probs).Named("Root" + ijk));
+                                        RootInfo.Add(ijk, Tuple.Create(0, ij, ik, jk));
                                     }
 
                                     // initialising variables in related array 
@@ -232,21 +234,27 @@ namespace Bayesian_Inference
                                         string ijl = ij + l.ToString();
                                         string ikl = ik + l.ToString();
                                         string jkl = jk + l.ToString();
+                                        string il = i.ToString() + l.ToString();
+                                        string jl = j.ToString() + l.ToString();
+                                        string kl = k.ToString() + l.ToString();
 
                                         //create all triples that don't already exist in the bayesian network
                                         if (Roots.ContainsKey(ijl) == false)
                                         {
                                             Roots.Add(ijl, Variable.New<int>());
+                                            RootInfo.Add(ijl, Tuple.Create(1, ij, il, jl));
                                         }
 
                                         if (Roots.ContainsKey(ikl) == false)
                                         {
                                             Roots.Add(ikl, Variable.New<int>());
+                                            RootInfo.Add(ikl, Tuple.Create(2, ik, il, kl));
                                         }
 
                                         if (Roots.ContainsKey(jkl) == false)
                                         {
                                             Roots.Add(jkl, Variable.New<int>());
+                                            RootInfo.Add(jkl, Tuple.Create(3, jk, jl, kl));
                                         }
                                     }
 
@@ -260,7 +268,7 @@ namespace Bayesian_Inference
                                             string jkl = jk + l.ToString();
 
                                             // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false) 
+                                            if (Roots[ijl].IsDefined == false)
                                             {
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
@@ -332,7 +340,7 @@ namespace Bayesian_Inference
                                             string jkl = jk + l.ToString();
 
                                             // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false) 
+                                            if (Roots[ijl].IsDefined == false)
                                             {
                                                 Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
                                                 Roots[ijl].Name = ("Root" + ijl);
@@ -618,7 +626,7 @@ namespace Bayesian_Inference
                             NameScore[i, j].ObservedValue = relation.getNameScore();
 
                             //Console.WriteLine(personList[i].getName() + " and " + personList[j].getName() + " are related: " + ie.Infer(Related[i, j]));
-                            
+
                         }
                     }
                 }
