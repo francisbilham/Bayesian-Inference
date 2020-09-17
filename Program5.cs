@@ -113,10 +113,10 @@ namespace Bayesian_Inference
 
 
                 // a bunch of maths that relates to a 3 circle Venn diagram to compute the probability of the 8 outcomes for three relationships
-                double prob_all_related = transfer_related_factor * prior_prob_of_pair_related * prior_prob_of_pair_related + (1 - transfer_related_factor) * prior_prob_of_pair_related * prior_prob_of_pair_related * prior_prob_of_pair_related;
-                double prob_two_pairs_related = prior_prob_of_pair_related * prior_prob_of_pair_related - prob_all_related;
-                double prob_one_pair_related = prior_prob_of_pair_related - prob_all_related - 2 * prob_two_pairs_related;
-                double prob_none_related = 1 - 3 * prob_one_pair_related - 3 * prob_two_pairs_related - prob_all_related;
+                double prob_all_related = prior_prob_of_pair_related * prior_prob_of_pair_related * transfer_related_factor;
+                double prob_two_pairs_related = (prior_prob_of_pair_related * prior_prob_of_pair_related) * (1 - transfer_related_factor);
+                double prob_one_pair_related = prior_prob_of_pair_related - ((2 - transfer_related_factor) * (prior_prob_of_pair_related * prior_prob_of_pair_related));
+                double prob_none_related = 1 - (3 * prior_prob_of_pair_related) + ((3 - transfer_related_factor) * (prior_prob_of_pair_related * prior_prob_of_pair_related));
 
                 double[] probs = new double[] { prob_none_related, prob_one_pair_related, prob_one_pair_related, prob_one_pair_related, prob_two_pairs_related, prob_two_pairs_related, prob_two_pairs_related, prob_all_related };
 
@@ -142,6 +142,32 @@ namespace Bayesian_Inference
                 {
                     probs_first_pair_set_1[i] /= total;
                 }
+
+                double[] probs_two_pair_set_00 = new double[] { (1 - prior_prob_of_pair_related), 0, 0, prior_prob_of_pair_related, 0, 0, 0, 0 };
+
+                double[] probs_two_pair_set_01 = new double[] { 0, 0, prob_one_pair_related, prob_one_pair_related, 0, 0, prob_two_pairs_related, 0 };
+                total = 0;
+                for (int i = 0; i < 8; i++)
+                {
+                    total += probs_two_pair_set_01[i];
+                }
+                for (int i = 0; i < 8; i++)
+                {
+                    probs_two_pair_set_01[i] /= total;
+                }
+
+                double[] probs_two_pair_set_10 = new double[] { 0, prob_one_pair_related, 0, prob_one_pair_related, 0, prob_two_pairs_related, 0, 0 };
+                total = 0;
+                for (int i = 0; i < 8; i++)
+                {
+                    total += probs_two_pair_set_10[i];
+                }
+                for (int i = 0; i < 8; i++)
+                {
+                    probs_two_pair_set_10[i] /= total;
+                }
+
+                double[] probs_two_pair_set_11 = new double[] { 0, 0, 0, 0, (1 - transfer_related_factor), 0, 0, transfer_related_factor };
 
                 // run inference on 3 person sub-networks. Loops over i from 0 to n, then j from i + 1 to n, then k from j + 1 to n. Since the matrices we 
                 // store data in are symmetrical, we can do this as long as we make sure all the operations for ij are applied to ji too.
