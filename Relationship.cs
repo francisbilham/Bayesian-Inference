@@ -16,8 +16,9 @@ namespace Bayesian_Inference
         protected double relatedScore; //
         protected int docCount; //fewest number of people appearing on the same common document
         protected double nameScore;
+        protected bool isDeclared;
 
-        public Relationship(Person person1, Person person2, List<Person> people = null, bool isPanui = false, bool isShareTrans = false, bool isNameMatch = false, double nameScore = double.NaN)
+        public Relationship(Person person1, Person person2, List<Person> people = null, bool isPanui = false, bool isShareTrans = false, bool isNameMatch = false, double nameScore = double.NaN, bool isDeclared = false)
         {
             this.person1 = person1;
             this.person2 = person2;
@@ -33,6 +34,7 @@ namespace Bayesian_Inference
             this.isShareTrans = isShareTrans;
             this.isNameMatch = isNameMatch;
             this.nameScore = nameScore;
+            this.isDeclared = isDeclared;
 
             if (this.isPanui == false)
             {
@@ -73,6 +75,16 @@ namespace Bayesian_Inference
         public double getNameScore()
         {
             return this.nameScore;
+        }
+
+        public bool getIsDeclared()
+        {
+            return this.isDeclared;
+        }
+
+        public void declare()
+        {
+            this.isDeclared = true;
         }
 
         private bool findPanui(Person p1, Person p2, ref int personamount) //this doesnt find how many panui applications they have together, and only returns the amount of people in the first panui application it finds

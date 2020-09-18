@@ -95,17 +95,51 @@ namespace Bayesian_Inference
                         }
                     }
                 }
+
+                // Create triples and list them all in unsolved triple list
+                List<Triple> tripleList = new List<Triple>();
+                for (int i = 0; i < personList.Count - 2; i++)
+                {
+                    for (int j = i + 1; j < personList.Count - 1; j++)
+                    {
+                        if (personList[i] != personList[j])
+                        {
+                            for (int k = j + 1; k < personList.Count; k++)
+                            {
+                                if ((personList[i] != personList[k]) & (personList[j] != personList[k]))
+                                {
+                                    bool ij = isRelationship(personList[i], personList[j], relationshipList);
+                                    bool ik = isRelationship(personList[i], personList[k], relationshipList);
+                                    bool jk = isRelationship(personList[j], personList[k], relationshipList);
+                                    if (ij & ik & jk)
+                                    {
+                                        List<Person> people = new List<Person>();
+                                        people.Add(personList[i]);
+                                        people.Add(personList[j]);
+                                        people.Add(personList[k]);
+                                        List<Relationship> pairs = new List<Relationship>();
+                                        pairs.Add(GetRelationship(personList[i], personList[j], relationshipList));
+                                        pairs.Add(GetRelationship(personList[i], personList[k], relationshipList));
+                                        pairs.Add(GetRelationship(personList[j], personList[k], relationshipList));
+                                        tripleList.Add(new Triple(pairs, people));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 ///////////////////////////////// FINISHED LOADING IN NETWORK DATA //////////////////////////////////
 
                 // Setting up arrays and dictionary. Each array is n by n (n being the amount of people in the network) and the elements correspond to 
-                // a relationship ([1,2] relates to relationship12) and so each element stores the status of the attribute in the corresponding relationship
-                // e.g Panui[1,2] = True means people 1 and 2 appear in a panui application together.
+                // a relationship ([1,2] is relates to relationship12) and so each element stores the status of the attribute in the corresponding relationship
+                // e.g Panui[1,2] = true means people 1 and 2 appear in a panui application together.
                 int n = personList.Count;
                 Variable<bool>[,] Panui = new Variable<bool>[n, n];
                 Variable<bool>[,] ShareTrans = new Variable<bool>[n, n];
                 Variable<double>[,] NameScore = new Variable<double>[n, n];
                 Variable<bool>[,] Related = new Variable<bool>[n, n];
-                IDictionary<string, Variable<int>> Roots = new Dictionary<string, Variable<int>>(); //dictionary of the triple nodes.
+                //IDictionary<string, Variable<int>> Roots = new Dictionary<string, Variable<int>>(); //dictionary of the triple nodes.
+                //IDictionary<string, Tuple<int, string, string, string>> RootInfo = new Dictionary<string, Tuple<int, string, string, string>>();
 
                 double total;
                 double prior_prob_of_pair_related = 0.05; // prior probability for any pair being related
@@ -116,11 +150,11 @@ namespace Bayesian_Inference
                 double prob_all_related = prior_prob_of_pair_related * prior_prob_of_pair_related * transfer_related_factor;
                 double prob_two_pairs_related = (prior_prob_of_pair_related * prior_prob_of_pair_related) * (1 - transfer_related_factor);
                 double prob_one_pair_related = prior_prob_of_pair_related - ((2 - transfer_related_factor) * (prior_prob_of_pair_related * prior_prob_of_pair_related));
-                double prob_none_related = 1 - (3 * prior_prob_of_pair_related) + ((3 - transfer_related_factor) * (prior_prob_of_pair_related * prior_prob_of_pair_related)); 
+                double prob_none_related = 1 - (3 * prior_prob_of_pair_related) + ((3 - transfer_related_factor) * (prior_prob_of_pair_related * prior_prob_of_pair_related));
 
                 double[] probs = new double[] { prob_none_related, prob_one_pair_related, prob_one_pair_related, prob_one_pair_related, prob_two_pairs_related, prob_two_pairs_related, prob_two_pairs_related, prob_all_related };
 
-                // some hardcoded probability updates for 
+                // some hardcoded probability updates for a triple with one parent
                 double[] probs_first_pair_set_0 = new double[] { prob_none_related, 0, prob_one_pair_related, prob_one_pair_related, 0, 0, prob_two_pairs_related, 0 };
                 total = 0;
                 for (int i = 0; i < 8; i++)
@@ -143,475 +177,48 @@ namespace Bayesian_Inference
                     probs_first_pair_set_1[i] /= total;
                 }
 
-                // run inference on 3 person sub-networks. Loops over i from 0 to n, then j from i + 1 to n, then k from j + 1 to n. Since the matrices we 
-                // store data in are symmetrical, we can do this as long as we make sure all the operations for ij are applied to ji too.
-                for (int i = 0; i < personList.Count; i++)
+                // some hardcoded probability updates for a triple with two parents
+                double[] probs_two_pair_set_00 = new double[] { (1 - prior_prob_of_pair_related), 0, 0, prior_prob_of_pair_related, 0, 0, 0, 0 };
+
+                double[] probs_two_pair_set_01 = new double[] { 0, 0, prob_one_pair_related, prob_one_pair_related, 0, 0, prob_two_pairs_related, 0 };
+                total = 0;
+                for (int i = 0; i < 8; i++)
                 {
-                    for (int j = i + 1; j < personList.Count; j++)
-                    {
-                        if (personList[i] != personList[j])
-                        {
-                            for (int k = j + 1; k < personList.Count; k++)
-                            {
-                                if ((personList[i] != personList[k]) & (personList[j] != personList[k]))
-                                {
-                                    // strings of the indices
-                                    string ij = i.ToString() + j.ToString();
-                                    string ik = i.ToString() + k.ToString();
-                                    string jk = j.ToString() + k.ToString();
-                                    string ijk = i.ToString() + j.ToString() + k.ToString();
-
-                                    // if the triple is not already linked in the network, then create it
-                                    if (Roots.ContainsKey(ijk) == false)
-                                    {
-                                        Roots.Add(ijk, Variable.Discrete(probs).Named("Root" + ijk));
-                                    }
-
-                                    // initialising variables in related array 
-                                    Related[i, j] = Variable.New<bool>();
-                                    Related[i, k] = Variable.New<bool>();
-                                    Related[j, k] = Variable.New<bool>();
-                                    Related[j, i] = Variable.New<bool>();
-                                    Related[k, i] = Variable.New<bool>();
-                                    Related[k, j] = Variable.New<bool>();
-
-                                    // initialising variables in panui array 
-                                    Panui[i, j] = Variable.New<bool>();
-                                    Panui[i, k] = Variable.New<bool>();
-                                    Panui[j, k] = Variable.New<bool>();
-                                    Panui[j, i] = Variable.New<bool>();
-                                    Panui[k, i] = Variable.New<bool>();
-                                    Panui[k, j] = Variable.New<bool>();
-
-                                    // initialising variables in share transfer array
-                                    ShareTrans[i, j] = Variable.New<bool>();
-                                    ShareTrans[i, k] = Variable.New<bool>();
-                                    ShareTrans[j, k] = Variable.New<bool>();
-                                    ShareTrans[j, i] = Variable.New<bool>();
-                                    ShareTrans[k, i] = Variable.New<bool>();
-                                    ShareTrans[k, j] = Variable.New<bool>();
-
-                                    // initialising variables in name score array
-                                    NameScore[i, j] = Variable.New<double>();
-                                    NameScore[i, k] = Variable.New<double>();
-                                    NameScore[j, k] = Variable.New<double>();
-                                    NameScore[j, i] = Variable.New<double>();
-                                    NameScore[k, i] = Variable.New<double>();
-                                    NameScore[k, j] = Variable.New<double>();
-
-                                    //for loop which goes over adjacent triples and sets distribution based on result of this root triple
-                                    for (int l = k + 1; l < personList.Count; l++)
-                                    {
-                                        //strings of all adjacent triples
-                                        string ijl = ij + l.ToString();
-                                        string ikl = ik + l.ToString();
-                                        string jkl = jk + l.ToString();
-
-                                        //create all triples that don't already exist in the bayesian network
-                                        if (Roots.ContainsKey(ijl) == false)
-                                        {
-                                            Roots.Add(ijl, Variable.New<int>());
-                                        }
-
-                                        if (Roots.ContainsKey(ikl) == false)
-                                        {
-                                            Roots.Add(ikl, Variable.New<int>());
-                                        }
-
-                                        if (Roots.ContainsKey(jkl) == false)
-                                        {
-                                            Roots.Add(jkl, Variable.New<int>());
-                                        }
-                                    }
-
-                                    using (Variable.If(Roots[ijk] == 0))
-                                    {
-                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
-                                        for (int l = k + 1; l < personList.Count; l++)
-                                        {
-                                            string ijl = ij + l.ToString();
-                                            string ikl = ik + l.ToString();
-                                            string jkl = jk + l.ToString();
-
-                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false)
-                                            {
-                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
-                                                Roots[ijl].Name = ("Root" + ijl);
-                                            }
-                                            if (Roots[ikl].IsDefined == false)
-                                            {
-                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
-                                                Roots[ikl].Name = ("Root" + ikl);
-                                            }
-                                            if (Roots[jkl].IsDefined == false)
-                                            {
-                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
-                                                Roots[jkl].Name = ("Root" + jkl);
-                                            }
-                                        }
-
-                                        // set variables bernoulli distribution based on this triples outcome
-                                        Related[i, j].SetTo(Variable.Bernoulli(0));
-                                        Related[i, k].SetTo(Variable.Bernoulli(0));
-                                        Related[j, k].SetTo(Variable.Bernoulli(0));
-                                        Related[j, i].SetTo(Variable.Bernoulli(0));
-                                        Related[k, i].SetTo(Variable.Bernoulli(0));
-                                        Related[k, j].SetTo(Variable.Bernoulli(0));
-                                    }
-
-                                    using (Variable.If(Roots[ijk] == 1))
-                                    {
-                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
-                                        for (int l = k + 1; l < personList.Count; l++)
-                                        {
-                                            string ijl = ij + l.ToString();
-                                            string ikl = ik + l.ToString();
-                                            string jkl = jk + l.ToString();
-
-                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false)
-                                            {
-                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
-                                                Roots[ijl].Name = ("Root" + ijl);
-                                            }
-                                            if (Roots[ikl].IsDefined == false)
-                                            {
-                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
-                                                Roots[ikl].Name = ("Root" + ikl);
-                                            }
-                                            if (Roots[jkl].IsDefined == false)
-                                            {
-                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
-                                                Roots[jkl].Name = ("Root" + jkl);
-                                            }
-                                        }
-
-                                        // set variables bernoulli distribution based on this triples outcome
-                                        Related[i, j].SetTo(Variable.Bernoulli(1));
-                                        Related[i, k].SetTo(Variable.Bernoulli(0));
-                                        Related[j, k].SetTo(Variable.Bernoulli(0));
-                                        Related[j, i].SetTo(Variable.Bernoulli(1));
-                                        Related[k, i].SetTo(Variable.Bernoulli(0));
-                                        Related[k, j].SetTo(Variable.Bernoulli(0));
-                                    }
-
-                                    using (Variable.If(Roots[ijk] == 2))
-                                    {
-                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
-                                        for (int l = k + 1; l < personList.Count; l++)
-                                        {
-                                            string ijl = ij + l.ToString();
-                                            string ikl = ik + l.ToString();
-                                            string jkl = jk + l.ToString();
-
-                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false)
-                                            {
-                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
-                                                Roots[ijl].Name = ("Root" + ijl);
-                                            }
-                                            if (Roots[ikl].IsDefined == false)
-                                            {
-                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
-                                                Roots[ikl].Name = ("Root" + ikl);
-                                            }
-                                            if (Roots[jkl].IsDefined == false)
-                                            {
-                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
-                                                Roots[jkl].Name = ("Root" + jkl);
-                                            }
-                                        }
-
-                                        // set variables bernoulli distribution based on this triples outcome
-                                        Related[i, j].SetTo(Variable.Bernoulli(0));
-                                        Related[i, k].SetTo(Variable.Bernoulli(1));
-                                        Related[j, k].SetTo(Variable.Bernoulli(0));
-                                        Related[j, i].SetTo(Variable.Bernoulli(0));
-                                        Related[k, i].SetTo(Variable.Bernoulli(1));
-                                        Related[k, j].SetTo(Variable.Bernoulli(0));
-                                    }
-
-                                    using (Variable.If(Roots[ijk] == 3))
-                                    {
-                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
-                                        for (int l = k + 1; l < personList.Count; l++)
-                                        {
-                                            string ijl = ij + l.ToString();
-                                            string ikl = ik + l.ToString();
-                                            string jkl = jk + l.ToString();
-                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false)
-                                            {
-                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
-                                                Roots[ijl].Name = ("Root" + ijl);
-                                            }
-                                            if (Roots[ikl].IsDefined == false)
-                                            {
-                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
-                                                Roots[ikl].Name = ("Root" + ikl);
-                                            }
-                                            if (Roots[jkl].IsDefined == false)
-                                            {
-                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
-                                                Roots[jkl].Name = ("Root" + jkl);
-                                            }
-                                        }
-
-                                        // set variables bernoulli distribution based on this triples outcome
-                                        Related[i, j].SetTo(Variable.Bernoulli(0));
-                                        Related[i, k].SetTo(Variable.Bernoulli(0));
-                                        Related[j, k].SetTo(Variable.Bernoulli(1));
-                                        Related[j, i].SetTo(Variable.Bernoulli(0));
-                                        Related[k, i].SetTo(Variable.Bernoulli(0));
-                                        Related[k, j].SetTo(Variable.Bernoulli(1));
-                                    }
-
-                                    using (Variable.If(Roots[ijk] == 4))
-                                    {
-                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
-                                        for (int l = k + 1; l < personList.Count; l++)
-                                        {
-                                            string ijl = ij + l.ToString();
-                                            string ikl = ik + l.ToString();
-                                            string jkl = jk + l.ToString();
-
-                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false)
-                                            {
-                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
-                                                Roots[ijl].Name = ("Root" + ijl);
-                                            }
-                                            if (Roots[ikl].IsDefined == false)
-                                            {
-                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
-                                                Roots[ikl].Name = ("Root" + ikl);
-                                            }
-                                            if (Roots[jkl].IsDefined == false)
-                                            {
-                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + jkl));
-                                                Roots[jkl].Name = ("Root" + jkl);
-                                            }
-                                        }
-
-                                        // set variables bernoulli distribution based on this triples outcome
-                                        Related[i, j].SetTo(Variable.Bernoulli(1));
-                                        Related[i, k].SetTo(Variable.Bernoulli(1));
-                                        Related[j, k].SetTo(Variable.Bernoulli(0));
-                                        Related[j, i].SetTo(Variable.Bernoulli(1));
-                                        Related[k, i].SetTo(Variable.Bernoulli(1));
-                                        Related[k, j].SetTo(Variable.Bernoulli(0));
-                                    }
-
-                                    using (Variable.If(Roots[ijk] == 5))
-                                    {
-                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
-                                        for (int l = k + 1; l < personList.Count; l++)
-                                        {
-                                            string ijl = ij + l.ToString();
-                                            string ikl = ik + l.ToString();
-                                            string jkl = jk + l.ToString();
-
-                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false)
-                                            {
-                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
-                                                Roots[ijl].Name = ("Root" + ijl);
-                                            }
-                                            if (Roots[ikl].IsDefined == false)
-                                            {
-                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ikl));
-                                                Roots[ikl].Name = ("Root" + ikl);
-                                            }
-                                            if (Roots[jkl].IsDefined == false)
-                                            {
-                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
-                                                Roots[jkl].Name = ("Root" + jkl);
-                                            }
-                                        }
-
-                                        // set variables bernoulli distribution based on this triples outcome
-                                        Related[i, j].SetTo(Variable.Bernoulli(1));
-                                        Related[i, k].SetTo(Variable.Bernoulli(0));
-                                        Related[j, k].SetTo(Variable.Bernoulli(1));
-                                        Related[j, i].SetTo(Variable.Bernoulli(1));
-                                        Related[k, i].SetTo(Variable.Bernoulli(0));
-                                        Related[k, j].SetTo(Variable.Bernoulli(1));
-                                    }
-
-                                    using (Variable.If(Roots[ijk] == 6))
-                                    {
-                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
-                                        for (int l = k + 1; l < personList.Count; l++)
-                                        {
-                                            string ijl = ij + l.ToString();
-                                            string ikl = ik + l.ToString();
-                                            string jkl = jk + l.ToString();
-
-                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false)
-                                            {
-                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_0).Named("Root" + ijl));
-                                                Roots[ijl].Name = ("Root" + ijl);
-                                            }
-                                            if (Roots[ikl].IsDefined == false)
-                                            {
-                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
-                                                Roots[ikl].Name = ("Root" + ikl);
-                                            }
-                                            if (Roots[jkl].IsDefined == false)
-                                            {
-                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
-                                                Roots[jkl].Name = ("Root" + jkl);
-                                            }
-                                        }
-
-                                        // set variables bernoulli distribution based on this triples outcome
-                                        Related[i, j].SetTo(Variable.Bernoulli(0));
-                                        Related[i, k].SetTo(Variable.Bernoulli(1));
-                                        Related[j, k].SetTo(Variable.Bernoulli(1));
-                                        Related[j, i].SetTo(Variable.Bernoulli(0));
-                                        Related[k, i].SetTo(Variable.Bernoulli(1));
-                                        Related[k, j].SetTo(Variable.Bernoulli(1));
-                                    }
-
-                                    using (Variable.If(Roots[ijk] == 7))
-                                    {
-                                        //for loop which goes over adjacent nodes and sets distribution based on result of this root node
-                                        for (int l = k + 1; l < personList.Count; l++)
-                                        {
-                                            string ijl = ij + l.ToString();
-                                            string ikl = ik + l.ToString();
-                                            string jkl = jk + l.ToString();
-
-                                            // if the adjacent triples haven't already had their distribution set previously, then set it based on this root triples results
-                                            if (Roots[ijl].IsDefined == false)
-                                            {
-                                                Roots[ijl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ijl));
-                                                Roots[ijl].Name = ("Root" + ijl);
-                                            }
-                                            if (Roots[ikl].IsDefined == false)
-                                            {
-                                                Roots[ikl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + ikl));
-                                                Roots[ikl].Name = ("Root" + ikl);
-                                            }
-                                            if (Roots[jkl].IsDefined == false)
-                                            {
-                                                Roots[jkl].SetTo(Variable.Discrete(probs_first_pair_set_1).Named("Root" + jkl));
-                                                Roots[jkl].Name = ("Root" + jkl);
-                                            }
-                                        }
-
-                                        // set variables bernoulli distribution based on this triples outcome
-                                        Related[i, j].SetTo(Variable.Bernoulli(1));
-                                        Related[i, k].SetTo(Variable.Bernoulli(1));
-                                        Related[j, k].SetTo(Variable.Bernoulli(1));
-                                        Related[j, i].SetTo(Variable.Bernoulli(1));
-                                        Related[k, i].SetTo(Variable.Bernoulli(1));
-                                        Related[k, j].SetTo(Variable.Bernoulli(1));
-                                    }
-
-
-                                    using (Variable.If(Related[i, j]))
-                                    {
-                                        Panui[i, j].SetTo(Variable.Bernoulli(0.7));
-                                        ShareTrans[i, j].SetTo(Variable.Bernoulli(0.8));
-                                        NameScore[i, j].SetTo(Variable.Beta(2.0, 5.0));
-                                        Panui[j, i].SetTo(Variable.Bernoulli(0.7));
-                                        ShareTrans[j, i].SetTo(Variable.Bernoulli(0.8));
-                                        NameScore[j, i].SetTo(Variable.Beta(2.0, 5.0));
-                                    }
-                                    using (Variable.IfNot(Related[i, j]))
-                                    {
-                                        Panui[i, j].SetTo(Variable.Bernoulli(0.2));
-                                        ShareTrans[i, j].SetTo(Variable.Bernoulli(0.01));
-                                        NameScore[i, j].SetTo(Variable.Beta(5.0, 2.0));
-                                        Panui[j, i].SetTo(Variable.Bernoulli(0.2));
-                                        ShareTrans[j, i].SetTo(Variable.Bernoulli(0.01));
-                                        NameScore[j, i].SetTo(Variable.Beta(5.0, 2.0));
-                                    }
-
-                                    using (Variable.If(Related[i, k]))
-                                    {
-                                        Panui[i, k].SetTo(Variable.Bernoulli(0.7));
-                                        ShareTrans[i, k].SetTo(Variable.Bernoulli(0.8));
-                                        NameScore[i, k].SetTo(Variable.Beta(2.0, 5.0));
-                                        Panui[k, i].SetTo(Variable.Bernoulli(0.7));
-                                        ShareTrans[k, i].SetTo(Variable.Bernoulli(0.8));
-                                        NameScore[k, i].SetTo(Variable.Beta(2.0, 5.0));
-                                    }
-                                    using (Variable.IfNot(Related[i, k]))
-                                    {
-                                        Panui[i, k].SetTo(Variable.Bernoulli(0.2));
-                                        ShareTrans[i, k].SetTo(Variable.Bernoulli(0.01));
-                                        NameScore[i, k].SetTo(Variable.Beta(5.0, 2.0));
-                                        Panui[k, i].SetTo(Variable.Bernoulli(0.2));
-                                        ShareTrans[k, i].SetTo(Variable.Bernoulli(0.01));
-                                        NameScore[k, i].SetTo(Variable.Beta(5.0, 2.0));
-                                    }
-
-                                    using (Variable.If(Related[j, k]))
-                                    {
-                                        Panui[j, k].SetTo(Variable.Bernoulli(0.7));
-                                        ShareTrans[j, k].SetTo(Variable.Bernoulli(0.8));
-                                        NameScore[j, k].SetTo(Variable.Beta(2.0, 5.0));
-                                        Panui[k, j].SetTo(Variable.Bernoulli(0.7));
-                                        ShareTrans[k, j].SetTo(Variable.Bernoulli(0.8));
-                                        NameScore[k, j].SetTo(Variable.Beta(2.0, 5.0));
-                                    }
-                                    using (Variable.IfNot(Related[j, k]))
-                                    {
-                                        Panui[j, k].SetTo(Variable.Bernoulli(0.2));
-                                        ShareTrans[j, k].SetTo(Variable.Bernoulli(0.01));
-                                        NameScore[j, k].SetTo(Variable.Beta(5.0, 2.0));
-                                        Panui[k, j].SetTo(Variable.Bernoulli(0.2));
-                                        ShareTrans[k, j].SetTo(Variable.Bernoulli(0.01));
-                                        NameScore[k, j].SetTo(Variable.Beta(5.0, 2.0));
-                                    }
-
-
-                                }
-                            }
-                        }
-                    }
+                    total += probs_two_pair_set_01[i];
+                }
+                for (int i = 0; i < 8; i++)
+                {
+                    probs_two_pair_set_01[i] /= total;
                 }
 
-                InferenceEngine ie = new InferenceEngine();
-                ie.Algorithm = new Microsoft.ML.Probabilistic.Algorithms.ExpectationPropagation();
-
-                // Run inference on every relationship
-                for (int i = 0; i < personList.Count; i++)
+                double[] probs_two_pair_set_10 = new double[] { 0, prob_one_pair_related, 0, prob_one_pair_related, 0, prob_two_pairs_related, 0, 0 };
+                total = 0;
+                for (int i = 0; i < 8; i++)
                 {
-                    for (int j = i + 1; j < personList.Count; j++)
-                    {
-                        if (personList[i] != personList[j])
-                        {
-                            Relationship relation = GetRelationship(personList[i], personList[j], relationshipList);
-                            Panui[i, j].ObservedValue = relation.getIsPanui();
-                            ShareTrans[i, j].ObservedValue = relation.getIsShareTrans();
-                            NameScore[i, j].ObservedValue = relation.getNameScore();
-
-                            //Console.WriteLine(personList[i].getName() + " and " + personList[j].getName() + " are related: " + ie.Infer(Related[i, j]));
-
-                        }
-                    }
+                    total += probs_two_pair_set_10[i];
+                }
+                for (int i = 0; i < 8; i++)
+                {
+                    probs_two_pair_set_10[i] /= total;
                 }
 
-                for (int i = 0; i < personList.Count; i++)
+                double[] probs_two_pair_set_11 = new double[] { 0, 0, 0, 0, (1 - transfer_related_factor), 0, 0, transfer_related_factor };
+
+                // Algorithm that sorts through triples, ranked by highest number of parents
+                int np;
+                Triple current;
+                while (tripleList.Count > 0)
                 {
-                    for (int j = i + 1; j < personList.Count; j++)
+                    np = maxParents(tripleList);
+                    current = tripleList[np];
+                    if (current.nParents() == 0)
                     {
-                        if (personList[i] != personList[j])
-                        {
-                            Console.WriteLine(personList[i].getName() + " and " + personList[j].getName() + " are related: " + ie.Infer(Related[i, j]));
-                        }
+
                     }
                 }
             }
             Run();
-            Console.WriteLine("breakpoint");
         }
-
         public static Person GetPerson(string name, List<Person> persons)
         {
 
@@ -686,6 +293,7 @@ namespace Bayesian_Inference
             return null;
         }
 
+        // this function returns a relationship given 2 people, if the relationship exists in the network
         public static Relationship GetRelationship(Person person1, Person person2, List<Relationship> relationshipList)
         {
             for (int i = 0; i < relationshipList.Count; i++)
@@ -701,5 +309,36 @@ namespace Bayesian_Inference
             return null;
         }
 
+        // this function takes 2 people and determines if a relationship between both of them exists in the network
+        public static bool isRelationship(Person person1, Person person2, List<Relationship> relationshipList)
+        {
+            for (int i = 0; i < relationshipList.Count; i++)
+            {
+                if ((relationshipList[i].getPeople()[0] == person1) || (relationshipList[i].getPeople()[0] == person2))
+                {
+                    if ((relationshipList[i].getPeople()[1] == person1) || (relationshipList[i].getPeople()[1] == person2))
+                    {
+                        return true;
+                    }      
+                }
+            }
+            return false;
+        }
+
+        // this function returns the index within the list of triples of the triple with the most parent relationships
+        public static int maxParents(List<Triple> tripleList)
+        {
+            int n = -1;
+            int index = 0;
+            for (int i = 0; i < tripleList.Count; i++)
+            {
+                if (tripleList[i].nParents() > n)
+                {
+                    n = tripleList[i].nParents();
+                    index = i;
+                }
+            }
+            return index;
+        }
     }
 }
