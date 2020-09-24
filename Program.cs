@@ -138,7 +138,7 @@ namespace Bayesian_Inference
                 Variable<bool>[,] ShareTrans = new Variable<bool>[n, n];
                 Variable<double>[,] NameScore = new Variable<double>[n, n];
                 Variable<bool>[,] Related = new Variable<bool>[n, n];
-                //IDictionary<string, Variable<int>> Roots = new Dictionary<string, Variable<int>>(); //dictionary of the triple nodes.
+                IDictionary<Triple, Variable<int>> Roots = new Dictionary<Triple, Variable<int>>(); //dictionary of the triple nodes.
                 //IDictionary<string, Tuple<int, string, string, string>> RootInfo = new Dictionary<string, Tuple<int, string, string, string>>();
 
                 double total;
@@ -205,6 +205,7 @@ namespace Bayesian_Inference
                 double[] probs_two_pair_set_11 = new double[] { 0, 0, 0, 0, (1 - transfer_related_factor), 0, 0, transfer_related_factor };
 
                 // Algorithm that sorts through triples, ranked by highest number of parents
+                // pop triple once it has been solved
                 int np;
                 Triple current;
                 while (tripleList.Count > 0)
@@ -213,8 +214,101 @@ namespace Bayesian_Inference
                     current = tripleList[np];
                     if (current.nParents() == 0)
                     {
-
+                        Roots.Add(current, Variable.Discrete(probs));
+                        using (Variable.If(Roots[current] == 0))
+                        {
+                            current.getRelationships()[0].setRelated(0);
+                            current.getRelationships()[1].setRelated(0);
+                            current.getRelationships()[2].setRelated(0);
+                        }
+                        using (Variable.If(Roots[current] == 1))
+                        {
+                            current.getRelationships()[0].setRelated(1);
+                            current.getRelationships()[1].setRelated(0);
+                            current.getRelationships()[2].setRelated(0);
+                        }
+                        using (Variable.If(Roots[current] == 2))
+                        {
+                            current.getRelationships()[0].setRelated(0);
+                            current.getRelationships()[1].setRelated(1);
+                            current.getRelationships()[2].setRelated(0);
+                        }
+                        using (Variable.If(Roots[current] == 3))
+                        {
+                            current.getRelationships()[0].setRelated(0);
+                            current.getRelationships()[1].setRelated(0);
+                            current.getRelationships()[2].setRelated(1);
+                        }
+                        using (Variable.If(Roots[current] == 4))
+                        {
+                            current.getRelationships()[0].setRelated(1);
+                            current.getRelationships()[1].setRelated(1);
+                            current.getRelationships()[2].setRelated(0);
+                        }
+                        using (Variable.If(Roots[current] == 5))
+                        {
+                            current.getRelationships()[0].setRelated(1);
+                            current.getRelationships()[1].setRelated(0);
+                            current.getRelationships()[2].setRelated(1);
+                        }
+                        using (Variable.If(Roots[current] == 6))
+                        {
+                            current.getRelationships()[0].setRelated(0);
+                            current.getRelationships()[1].setRelated(1);
+                            current.getRelationships()[2].setRelated(1);
+                        }
+                        using (Variable.If(Roots[current] == 7))
+                        {
+                            current.getRelationships()[0].setRelated(1);
+                            current.getRelationships()[1].setRelated(1);
+                            current.getRelationships()[2].setRelated(1);
+                        }
+                        
                     }
+                    if (current.nParents() == 1)
+                    {
+                        List<Relationship> parents = current.getParents();
+                        Relationship parent = parents[0];
+                        using (Variable.If(parent.getRelated() == false))
+                        {
+                            Roots.Add(current, Variable.Discrete(probs_first_pair_set_0));
+                        }
+                        using (Variable.If(parent.getRelated() == true))
+                        {
+                            Roots.Add(current, Variable.Discrete(probs_first_pair_set_1));
+                        }
+                    }
+                    if (current.nParents() == 2)
+                    {
+                        List<Relationship> parents = current.getParents();
+                        Relationship parent1 = parents[0];
+                        Relationship parent2 = parents[1];
+                        using (Variable.If(parent1.getRelated() == false))
+                        {
+                            using (Variable.If(parent2.getRelated() == false))
+                            {
+                                Roots.Add(current, Variable.Discrete(probs_two_pair_set_00));
+                            }
+                            using (Variable.If(parent2.getRelated() == true))
+                            {
+                                Roots.Add(current, Variable.Discrete(probs_two_pair_set_01));
+                            }
+                        }
+                        using (Variable.If(parent1.getRelated() == true))
+                        {
+                            using (Variable.If(parent2.getRelated() == false))
+                            {
+                                Roots.Add(current, Variable.Discrete(probs_two_pair_set_10));
+                            }
+                            using (Variable.If(parent2.getRelated() == true))
+                            {
+                                Roots.Add(current, Variable.Discrete(probs_two_pair_set_11));
+                            }
+                        }
+                    }
+                    current.declareChildren();
+                    current.solve();
+                    tripleList.Remove(current);
                 }
             }
             Run();

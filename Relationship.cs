@@ -1,6 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using Microsoft.ML.Probabilistic.Models;
+using Microsoft.ML.Probabilistic.Algorithms;
+using Microsoft.ML.Probabilistic.Distributions;
+using Microsoft.ML.Probabilistic.Math;
+using Range = Microsoft.ML.Probabilistic.Models.Range;
 
 namespace Bayesian_Inference
 {
@@ -17,6 +24,10 @@ namespace Bayesian_Inference
         protected int docCount; //fewest number of people appearing on the same common document
         protected double nameScore;
         protected bool isDeclared;
+        protected Variable<bool> Panui;
+        protected Variable<bool> ShareTrans;
+        protected Variable<double> vNameScore;
+        protected Variable<bool> Related;
 
         public Relationship(Person person1, Person person2, List<Person> people = null, bool isPanui = false, bool isShareTrans = false, bool isNameMatch = false, double nameScore = double.NaN, bool isDeclared = false)
         {
@@ -35,6 +46,10 @@ namespace Bayesian_Inference
             this.isNameMatch = isNameMatch;
             this.nameScore = nameScore;
             this.isDeclared = isDeclared;
+            this.Panui = Variable.New<bool>();
+            this.ShareTrans = Variable.New<bool>();
+            this.vNameScore = Variable.New<double>();
+            this.Related = Variable.New<bool>();
 
             if (this.isPanui == false)
             {
@@ -57,6 +72,23 @@ namespace Bayesian_Inference
             }
         }
 
+        public void setPanui(double bernoulli)
+        {
+            this.Panui.SetTo(Variable.Bernoulli(bernoulli));
+        }
+        public void setShareTrans(double bernoulli)
+        {
+            this.ShareTrans.SetTo(Variable.Bernoulli(bernoulli));
+        }
+        public void setvNameScore(double beta1, double beta2)
+        {
+            this.vNameScore.SetTo(Variable.Beta(beta1, beta2));
+        }
+        public void setRelated(double bernoulli)
+        {
+            this.Related.SetTo(Variable.Bernoulli(bernoulli));
+        }
+
         public List<Person> getPeople()
         {
             return this.people;
@@ -66,25 +98,26 @@ namespace Bayesian_Inference
         {
             return this.isPanui;
         }
-
         public bool getIsShareTrans()
         {
             return this.isShareTrans;
         }
-        
         public double getNameScore()
         {
             return this.nameScore;
         }
-
         public bool getIsDeclared()
         {
             return this.isDeclared;
         }
-
         public void declare()
         {
             this.isDeclared = true;
+        }
+
+        public Variable<bool> getRelated()
+        {
+            return this.Related;
         }
 
         private bool findPanui(Person p1, Person p2, ref int personamount) //this doesnt find how many panui applications they have together, and only returns the amount of people in the first panui application it finds
@@ -108,7 +141,6 @@ namespace Bayesian_Inference
             }
             return ispanui;
         }
-
         private bool findShareTrans(Person p1, Person p2)
         {
             for (int i = 0; i < p1.getShareTrans().Count; i++)
@@ -123,7 +155,6 @@ namespace Bayesian_Inference
             }
             return false;
         }
-
         private bool findNameMatch(Person p1, Person p2)
         {
             for (int i = 0; i < p1.getOtherNames().Count; i++)
@@ -138,7 +169,6 @@ namespace Bayesian_Inference
             }
             return false;
         }
-
         private double findNameMatchScore(Person p1, Person p2)
         {
             for (int i = 0; i < p1.getOtherNames().Count; i++) //loop through person 1's name nodes
@@ -161,7 +191,6 @@ namespace Bayesian_Inference
             double score = CalculateSimilarity(p1.getName(), p2.getName());
             return score;
         }
-
         private static int CalcLevenshteinDistance(string a, string b) //social.technet.microsoft.com/wiki/contents/articles/26805.c-calculating-percentage-similarity-of-2-strings.aspx
         {
             if (String.IsNullOrEmpty(a) && String.IsNullOrEmpty(b))
@@ -194,7 +223,6 @@ namespace Bayesian_Inference
                 }
             return distances[lengthA, lengthB];
         }
-
         private static double CalculateSimilarity(string source, string target) //social.technet.microsoft.com/wiki/contents/articles/26805.c-calculating-percentage-similarity-of-2-strings.aspx
         {
             if ((source == null) || (target == null)) return 0.0;
@@ -204,6 +232,5 @@ namespace Bayesian_Inference
             int stepsToSame = CalcLevenshteinDistance(source, target);
             return (1.0 - ((double)stepsToSame / (double)Math.Max(source.Length, target.Length)));
         }
-
     }
 }

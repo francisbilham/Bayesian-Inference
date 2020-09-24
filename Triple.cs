@@ -44,6 +44,19 @@ namespace Bayesian_Inference
             return n;
         }
 
+        public List<Relationship> getParents()
+        {
+            List<Relationship> parents = new List<Relationship>();
+            for (int i = 0; i < relationshipList.Count; i++)
+            {
+                if (relationshipList[i].getIsDeclared() == true)
+                {
+                    parents.Add(relationshipList[i]);
+                }
+            }
+            return parents;
+        }
+
         public void declareChildren()
         {
             for (int i = 0; i < relationshipList.Count; i++)
