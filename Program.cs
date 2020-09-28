@@ -212,9 +212,19 @@ namespace Bayesian_Inference
                 {
                     np = maxParents(tripleList);
                     current = tripleList[np];
+                    //Adds triple to triple dictionary
+                    if (Roots.ContainsKey(current) == false)
+                    {
+                        Roots.Add(current, Variable.New<int>());
+                    }
+
+
                     if (current.nParents() == 0)
                     {
-                        Roots.Add(current, Variable.Discrete(probs));
+                        if (Roots[current].IsDefined == false)
+                        {
+                            Roots[current].SetTo(Variable.Discrete(probs));
+                        }
                         using (Variable.If(Roots[current] == 0))
                         {
                             current.getRelationships()[0].setRelated(0);
@@ -263,7 +273,7 @@ namespace Bayesian_Inference
                             current.getRelationships()[1].setRelated(1);
                             current.getRelationships()[2].setRelated(1);
                         }
-                        
+
                     }
                     if (current.nParents() == 1)
                     {
@@ -271,7 +281,10 @@ namespace Bayesian_Inference
                         Relationship parent = parents[0];
                         using (Variable.If(parent.getRelated() == false))
                         {
-                            Roots.Add(current, Variable.Discrete(probs_first_pair_set_0));
+                            if (Roots[current].IsDefined == false)
+                            {
+                                Roots[current].SetTo(Variable.Discrete(probs_first_pair_set_0));
+                            }
                             using (Variable.If(Roots[current] == 0))
                             {
                                 current.getChildren()[0].setRelated(0);
@@ -295,7 +308,10 @@ namespace Bayesian_Inference
                         }
                         using (Variable.If(parent.getRelated() == true))
                         {
-                            Roots.Add(current, Variable.Discrete(probs_first_pair_set_1));
+                            if (Roots[current].IsDefined == false)
+                            {
+                                Roots[current].SetTo(Variable.Discrete(probs_first_pair_set_1));
+                            }
                             using (Variable.If(Roots[current] == 0))
                             {
                                 current.getChildren()[0].setRelated(0);
@@ -327,7 +343,11 @@ namespace Bayesian_Inference
                         {
                             using (Variable.If(parent2.getRelated() == false))
                             {
-                                Roots.Add(current, Variable.Discrete(probs_two_pair_set_00));
+                                if (Roots[current].IsDefined == false)
+                                {
+                                    Roots[current].SetTo(Variable.Discrete(probs_two_pair_set_00));
+                                }
+                                
                                 using (Variable.If(Roots[current] == 0))
                                 {
                                     current.getChildren()[0].setRelated(0);
@@ -339,7 +359,11 @@ namespace Bayesian_Inference
                             }
                             using (Variable.If(parent2.getRelated() == true))
                             {
-                                Roots.Add(current, Variable.Discrete(probs_two_pair_set_01));
+                                if (Roots[current].IsDefined == false)
+                                {
+                                    Roots[current].SetTo(Variable.Discrete(probs_two_pair_set_01));
+                                }
+                                
                                 using (Variable.If(Roots[current] == 0))
                                 {
                                     current.getChildren()[0].setRelated(0);
@@ -354,7 +378,11 @@ namespace Bayesian_Inference
                         {
                             using (Variable.If(parent2.getRelated() == false))
                             {
-                                Roots.Add(current, Variable.Discrete(probs_two_pair_set_10));
+                                if (Roots[current].IsDefined == false)
+                                {
+                                    Roots[current].SetTo(Variable.Discrete(probs_two_pair_set_10));
+                                }
+                                
                                 using (Variable.If(Roots[current] == 0))
                                 {
                                     current.getChildren()[0].setRelated(0);
@@ -366,7 +394,11 @@ namespace Bayesian_Inference
                             }
                             using (Variable.If(parent2.getRelated() == true))
                             {
-                                Roots.Add(current, Variable.Discrete(probs_two_pair_set_11));
+                                if (Roots[current].IsDefined == false)
+                                {
+                                    Roots[current].SetTo(Variable.Discrete(probs_two_pair_set_11));
+                                }
+                                
                                 using (Variable.If(Roots[current] == 0))
                                 {
                                     current.getChildren()[0].setRelated(0);
@@ -398,6 +430,16 @@ namespace Bayesian_Inference
                         relationshipList[i].setvNameScore(5.0, 2.0);
                     }
                 }
+
+                InferenceEngine ie = new InferenceEngine();
+                ie.Algorithm = new Microsoft.ML.Probabilistic.Algorithms.ExpectationPropagation();
+
+                for (int i = 0; i < relationshipList.Count; i++)
+                {
+                    Console.WriteLine(ie.Infer(relationshipList[i].getRelated()));
+                }
+
+
             }
             Run();
         }
@@ -501,7 +543,7 @@ namespace Bayesian_Inference
                     if ((relationshipList[i].getPeople()[1] == person1) || (relationshipList[i].getPeople()[1] == person2))
                     {
                         return true;
-                    }      
+                    }
                 }
             }
             return false;
