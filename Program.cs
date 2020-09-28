@@ -86,13 +86,9 @@ namespace Bayesian_Inference
                 List<Relationship> relationshipList = new List<Relationship>();
                 for (int i = 0; i < personList.Count; i++)
                 {
-                    for (int j = 0; j < personList.Count; j++)
+                    for (int j = i+1; j < personList.Count; j++)
                     {
-                        if (personList[i] != personList[j])
-                        {
-                            relationshipList.Add(new Relationship(personList[i], personList[j]));
-
-                        }
+                        relationshipList.Add(new Relationship(personList[i], personList[j]));
                     }
                 }
 
@@ -141,68 +137,22 @@ namespace Bayesian_Inference
                 IDictionary<Triple, Variable<int>> Roots = new Dictionary<Triple, Variable<int>>(); //dictionary of the triple nodes.
                 //IDictionary<string, Tuple<int, string, string, string>> RootInfo = new Dictionary<string, Tuple<int, string, string, string>>();
 
-                double total;
-                double prior_prob_of_pair_related = 0.05; // prior probability for any pair being related
-                double transfer_related_factor = 0.8; // setting to 1.0 means that 12 related and 13 related implies 23 related, 0.0 means that 12 / 13 related are independent of 23 related
+                double p = 0.05; // prior probability for any pair being related
+                double q = 0.8; // setting to 1.0 means that 12 related and 13 related implies 23 related, setting to prior_prob_of_pair_related means that 12 / 13 related are independent of 23 related
 
 
                 // a bunch of maths that relates to a 3 circle Venn diagram to compute the probability of the 8 outcomes for three relationships
-                double prob_all_related = prior_prob_of_pair_related * prior_prob_of_pair_related * transfer_related_factor;
-                double prob_two_pairs_related = (prior_prob_of_pair_related * prior_prob_of_pair_related) * (1 - transfer_related_factor);
-                double prob_one_pair_related = prior_prob_of_pair_related - ((2 - transfer_related_factor) * (prior_prob_of_pair_related * prior_prob_of_pair_related));
-                double prob_none_related = 1 - (3 * prior_prob_of_pair_related) + ((3 - transfer_related_factor) * (prior_prob_of_pair_related * prior_prob_of_pair_related));
+                double D = p * p * q;
+                double C = (p * p) * (1 - q);
+                double B = p - ((2 - q) * (p * p));
+                double A = 1 - (3 * p) + ((3 - q) * (p * p));
 
-                double[] probs = new double[] { prob_none_related, prob_one_pair_related, prob_one_pair_related, prob_one_pair_related, prob_two_pairs_related, prob_two_pairs_related, prob_two_pairs_related, prob_all_related };
-
-                // some hardcoded probability updates for a triple with one parent
-                double[] probs_first_pair_set_0 = new double[] { prob_none_related, 0, prob_one_pair_related, prob_one_pair_related, 0, 0, prob_two_pairs_related, 0 };
-                total = 0;
-                for (int i = 0; i < 8; i++)
-                {
-                    total += probs_first_pair_set_0[i];
-                }
-                for (int i = 0; i < 8; i++)
-                {
-                    probs_first_pair_set_0[i] /= total;
-                }
-
-                double[] probs_first_pair_set_1 = new double[] { 0, prob_one_pair_related, 0, 0, prob_two_pairs_related, prob_two_pairs_related, 0, prob_all_related };
-                total = 0;
-                for (int i = 0; i < 8; i++)
-                {
-                    total += probs_first_pair_set_1[i];
-                }
-                for (int i = 0; i < 8; i++)
-                {
-                    probs_first_pair_set_1[i] /= total;
-                }
-
-                // some hardcoded probability updates for a triple with two parents
-                double[] probs_two_pair_set_00 = new double[] { (1 - prior_prob_of_pair_related), 0, 0, prior_prob_of_pair_related, 0, 0, 0, 0 };
-
-                double[] probs_two_pair_set_01 = new double[] { 0, 0, prob_one_pair_related, prob_one_pair_related, 0, 0, prob_two_pairs_related, 0 };
-                total = 0;
-                for (int i = 0; i < 8; i++)
-                {
-                    total += probs_two_pair_set_01[i];
-                }
-                for (int i = 0; i < 8; i++)
-                {
-                    probs_two_pair_set_01[i] /= total;
-                }
-
-                double[] probs_two_pair_set_10 = new double[] { 0, prob_one_pair_related, 0, prob_one_pair_related, 0, prob_two_pairs_related, 0, 0 };
-                total = 0;
-                for (int i = 0; i < 8; i++)
-                {
-                    total += probs_two_pair_set_10[i];
-                }
-                for (int i = 0; i < 8; i++)
-                {
-                    probs_two_pair_set_10[i] /= total;
-                }
-
-                double[] probs_two_pair_set_11 = new double[] { 0, 0, 0, 0, (1 - transfer_related_factor), 0, 0, transfer_related_factor };
+                double[] probs_noparent = new double[] { A, B, B, B, C, C, C, D };
+                double[] probs_oneparent_set_0 = new double[] { A / (1 - p), B / (1 - p), B / (1 - p), C / (1 - p) };
+                double[] probs_oneparent_set_1 = new double[] { B / p, C / p, C / p, D / p };
+                double[] probs_twoparent_set_00 = new double[] { A / (A + B), B / (A + B) };
+                double[] probs_twoparent_set_10_or_01 = new double[] { B / (B + C), C / (B + C) };
+                double[] probs_twoparent_set_11 = new double[] { C / (C + D), D / (C + D) };
 
                 // Algorithm that sorts through triples, ranked by highest number of parents
                 // pop triple once it has been solved
@@ -223,7 +173,7 @@ namespace Bayesian_Inference
                     {
                         if (Roots[current].IsDefined == false)
                         {
-                            Roots[current].SetTo(Variable.Discrete(probs));
+                            Roots[current].SetTo(Variable.Discrete(probs_noparent));
                         }
                         using (Variable.If(Roots[current] == 0))
                         {
@@ -279,59 +229,34 @@ namespace Bayesian_Inference
                     {
                         List<Relationship> parents = current.getParents();
                         Relationship parent = parents[0];
-                        using (Variable.If(parent.getRelated() == false))
+                        using (Variable.IfNot(parent.getRelated()))
                         {
-                            if (Roots[current].IsDefined == false)
-                            {
-                                Roots[current].SetTo(Variable.Discrete(probs_first_pair_set_0));
-                            }
-                            using (Variable.If(Roots[current] == 0))
-                            {
-                                current.getChildren()[0].setRelated(0);
-                                current.getChildren()[1].setRelated(0);
-                            }
-                            using (Variable.If(Roots[current] == 1))
-                            {
-                                current.getChildren()[0].setRelated(1);
-                                current.getChildren()[1].setRelated(0);
-                            }
-                            using (Variable.If(Roots[current] == 2))
-                            {
-                                current.getChildren()[0].setRelated(0);
-                                current.getChildren()[1].setRelated(1);
-                            }
-                            using (Variable.If(Roots[current] == 3))
-                            {
-                                current.getChildren()[0].setRelated(1);
-                                current.getChildren()[1].setRelated(1);
-                            }
+                            Roots[current].SetTo(Variable.Discrete(probs_oneparent_set_0));
                         }
-                        using (Variable.If(parent.getRelated() == true))
+                        using (Variable.If(parent.getRelated()))
                         {
-                            if (Roots[current].IsDefined == false)
-                            {
-                                Roots[current].SetTo(Variable.Discrete(probs_first_pair_set_1));
-                            }
-                            using (Variable.If(Roots[current] == 0))
-                            {
-                                current.getChildren()[0].setRelated(0);
-                                current.getChildren()[1].setRelated(0);
-                            }
-                            using (Variable.If(Roots[current] == 1))
-                            {
-                                current.getChildren()[0].setRelated(1);
-                                current.getChildren()[1].setRelated(0);
-                            }
-                            using (Variable.If(Roots[current] == 2))
-                            {
-                                current.getChildren()[0].setRelated(0);
-                                current.getChildren()[1].setRelated(1);
-                            }
-                            using (Variable.If(Roots[current] == 3))
-                            {
-                                current.getChildren()[0].setRelated(1);
-                                current.getChildren()[1].setRelated(1);
-                            }
+                            Roots[current].SetTo(Variable.Discrete(probs_oneparent_set_1));
+                        }
+
+                        using (Variable.If(Roots[current] == 0))
+                        {
+                            current.getChildren()[0].setRelated(0);
+                            current.getChildren()[1].setRelated(0);
+                        }
+                        using (Variable.If(Roots[current] == 1))
+                        {
+                            current.getChildren()[0].setRelated(1);
+                            current.getChildren()[1].setRelated(0);
+                        }
+                        using (Variable.If(Roots[current] == 2))
+                        {
+                            current.getChildren()[0].setRelated(0);
+                            current.getChildren()[1].setRelated(1);
+                        }
+                        using (Variable.If(Roots[current] == 3))
+                        {
+                            current.getChildren()[0].setRelated(1);
+                            current.getChildren()[1].setRelated(1);
                         }
                     }
                     if (current.nParents() == 2)
@@ -339,75 +264,47 @@ namespace Bayesian_Inference
                         List<Relationship> parents = current.getParents();
                         Relationship parent1 = parents[0];
                         Relationship parent2 = parents[1];
-                        using (Variable.If(parent1.getRelated() == false))
+                        using (Variable.IfNot(parent1.getRelated()))
                         {
-                            using (Variable.If(parent2.getRelated() == false))
+                            using (Variable.IfNot(parent2.getRelated()))
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
-                                    Roots[current].SetTo(Variable.Discrete(probs_two_pair_set_00));
-                                }
-                                
-                                using (Variable.If(Roots[current] == 0))
-                                {
-                                    current.getChildren()[0].setRelated(0);
-                                }
-                                using (Variable.If(Roots[current] == 1))
-                                {
-                                    current.getChildren()[0].setRelated(1);
+                                    Roots[current].SetTo(Variable.Discrete(probs_twoparent_set_00));
                                 }
                             }
-                            using (Variable.If(parent2.getRelated() == true))
+                            using (Variable.If(parent2.getRelated()))
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
-                                    Roots[current].SetTo(Variable.Discrete(probs_two_pair_set_01));
-                                }
-                                
-                                using (Variable.If(Roots[current] == 0))
-                                {
-                                    current.getChildren()[0].setRelated(0);
-                                }
-                                using (Variable.If(Roots[current] == 1))
-                                {
-                                    current.getChildren()[0].setRelated(1);
+                                    Roots[current].SetTo(Variable.Discrete(probs_twoparent_set_10_or_01));
                                 }
                             }
                         }
-                        using (Variable.If(parent1.getRelated() == true))
+                        using (Variable.If(parent1.getRelated()))
                         {
-                            using (Variable.If(parent2.getRelated() == false))
+                            using (Variable.IfNot(parent2.getRelated()))
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
-                                    Roots[current].SetTo(Variable.Discrete(probs_two_pair_set_10));
-                                }
-                                
-                                using (Variable.If(Roots[current] == 0))
-                                {
-                                    current.getChildren()[0].setRelated(0);
-                                }
-                                using (Variable.If(Roots[current] == 1))
-                                {
-                                    current.getChildren()[0].setRelated(1);
+                                    Roots[current].SetTo(Variable.Discrete(probs_twoparent_set_10_or_01));
                                 }
                             }
-                            using (Variable.If(parent2.getRelated() == true))
+                            using (Variable.If(parent2.getRelated()))
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
-                                    Roots[current].SetTo(Variable.Discrete(probs_two_pair_set_11));
-                                }
-                                
-                                using (Variable.If(Roots[current] == 0))
-                                {
-                                    current.getChildren()[0].setRelated(0);
-                                }
-                                using (Variable.If(Roots[current] == 1))
-                                {
-                                    current.getChildren()[0].setRelated(1);
+                                    Roots[current].SetTo(Variable.Discrete(probs_twoparent_set_11));
                                 }
                             }
+                        }
+                        using (Variable.If(Roots[current] == 0))
+                        {
+                            current.getChildren()[0].setRelated(0);
+                        }
+                        using (Variable.If(Roots[current] == 1))
+                        {
+                            current.getChildren()[0].setRelated(1);
                         }
                     }
                     current.declareChildren();
@@ -417,19 +314,22 @@ namespace Bayesian_Inference
                 // loop over pairs and set panui, share transfer, namescore variables
                 for (int i = 0; i < relationshipList.Count; i++)
                 {
-                    using (Variable.If(relationshipList[i].getRelated() == true))
+                    using (Variable.If(relationshipList[i].getRelated()))
                     {
                         relationshipList[i].setPanui(0.7);
                         relationshipList[i].setShareTrans(0.8);
                         relationshipList[i].setvNameScore(2.0, 5.0);
                     }
-                    using (Variable.If(relationshipList[i].getRelated() == false))
+                    using (Variable.IfNot(relationshipList[i].getRelated()))
                     {
                         relationshipList[i].setPanui(0.2);
                         relationshipList[i].setShareTrans(0.01);
                         relationshipList[i].setvNameScore(5.0, 2.0);
                     }
+                    relationshipList[i].observe();
                 }
+                
+
 
                 InferenceEngine ie = new InferenceEngine();
                 ie.Algorithm = new Microsoft.ML.Probabilistic.Algorithms.ExpectationPropagation();

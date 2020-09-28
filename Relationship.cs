@@ -89,6 +89,13 @@ namespace Bayesian_Inference
             this.Related.SetTo(Variable.Bernoulli(bernoulli));
         }
 
+        public void observe()
+        {
+            this.Panui.ObservedValue = isPanui;
+            this.ShareTrans.ObservedValue = isShareTrans;
+            this.vNameScore.ObservedValue = nameScore;
+        }
+
         public List<Person> getPeople()
         {
             return this.people;
