@@ -86,7 +86,7 @@ namespace Bayesian_Inference
                 List<Relationship> relationshipList = new List<Relationship>();
                 for (int i = 0; i < personList.Count; i++)
                 {
-                    for (int j = i+1; j < personList.Count; j++)
+                    for (int j = i + 1; j < personList.Count; j++)
                     {
                         relationshipList.Add(new Relationship(personList[i], personList[j]));
                     }
@@ -158,14 +158,16 @@ namespace Bayesian_Inference
                 // pop triple once it has been solved
                 int np;
                 Triple current;
+                List<Person> persons;
                 while (tripleList.Count > 0)
                 {
                     np = maxParents(tripleList);
                     current = tripleList[np];
+                    persons = current.getPeople();
                     //Adds triple to triple dictionary
                     if (Roots.ContainsKey(current) == false)
                     {
-                        Roots.Add(current, Variable.New<int>());
+                        Roots.Add(current, Variable.New<int>().Named(persons[0].getName() + " + " + persons[1].getName() + " + " + persons[2].getName()));
                     }
 
 
@@ -318,27 +320,32 @@ namespace Bayesian_Inference
                     {
                         relationshipList[i].setPanui(0.7);
                         relationshipList[i].setShareTrans(0.8);
-                        relationshipList[i].setvNameScore(2.0, 5.0);
+                        relationshipList[i].setvNameScore(1.0, 0.00001);
                     }
                     using (Variable.IfNot(relationshipList[i].getRelated()))
                     {
                         relationshipList[i].setPanui(0.2);
                         relationshipList[i].setShareTrans(0.01);
-                        relationshipList[i].setvNameScore(5.0, 2.0);
+                        relationshipList[i].setvNameScore(0.00001, 8.0);
                     }
                     relationshipList[i].observe();
                 }
-                
+
 
 
                 InferenceEngine ie = new InferenceEngine();
+                ie.ShowFactorGraph = true;
                 ie.Algorithm = new Microsoft.ML.Probabilistic.Algorithms.ExpectationPropagation();
 
                 for (int i = 0; i < relationshipList.Count; i++)
                 {
-                    Console.WriteLine(ie.Infer(relationshipList[i].getRelated()));
+                    List<Person> people = relationshipList[i].getPeople();
+                    Console.WriteLine(people[0].getName() + " and " + people[1].getName() + " are related " + ie.Infer(relationshipList[i].getRelated()));
+                    
                 }
 
+                Console.WriteLine("jeff");
+                ie.ShowFactorGraph = true;
 
             }
             Run();

@@ -40,7 +40,7 @@ namespace Bayesian_Inference
                 this.people.Add(person1);
                 this.people.Add(person2);
             }
-            
+
             this.isPanui = isPanui;
             this.isShareTrans = isShareTrans;
             this.isNameMatch = isNameMatch;
@@ -49,7 +49,7 @@ namespace Bayesian_Inference
             this.Panui = Variable.New<bool>();
             this.ShareTrans = Variable.New<bool>();
             this.vNameScore = Variable.New<double>();
-            this.Related = Variable.New<bool>();
+            this.Related = Variable.New<bool>().Named(this.person1.getName() + " + " + this.person2.getName());
 
             if (this.isPanui == false)
             {
