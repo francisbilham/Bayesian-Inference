@@ -344,8 +344,8 @@ namespace Bayesian_Inference
                     
                 }
 
-                Console.WriteLine("jeff");
-                ie.ShowFactorGraph = true;
+                Console.WriteLine("breakpoint");
+                //ie.ShowFactorGraph = true;
 
             }
             Run();
