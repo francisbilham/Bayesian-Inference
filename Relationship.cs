@@ -27,7 +27,8 @@ namespace Bayesian_Inference
         protected Variable<bool> Panui;
         protected Variable<bool> ShareTrans;
         protected Variable<double> vNameScore;
-        protected Variable<bool> Related;
+        protected Variable<bool> PairScore;
+        protected Variable<int> Related;
 
         public Relationship(Person person1, Person person2, List<Person> people = null, bool isPanui = false, bool isShareTrans = false, bool isNameMatch = false, double nameScore = double.NaN, bool isDeclared = false)
         {
@@ -49,7 +50,8 @@ namespace Bayesian_Inference
             this.Panui = Variable.New<bool>();
             this.ShareTrans = Variable.New<bool>();
             this.vNameScore = Variable.New<double>();
-            this.Related = Variable.New<bool>().Named(this.person1.getName() + " + " + this.person2.getName());
+            this.PairScore = Variable.New<bool>();
+            this.Related = Variable.New<int>().Named(this.person1.getName() + " + " + this.person2.getName());
 
             if (this.isPanui == false)
             {
@@ -84,9 +86,13 @@ namespace Bayesian_Inference
         {
             this.vNameScore.SetTo(Variable.Beta(beta1, beta2));
         }
-        public void setRelated(double bernoulli)
+        public void setPairScore(double bernoulli)
         {
-            this.Related.SetTo(Variable.Bernoulli(bernoulli));
+            this.PairScore.SetTo(Variable.Bernoulli(bernoulli));
+        }
+        public void setRelated(double[] probs)
+        {
+            this.Related.SetTo(Variable.Discrete(probs));
         }
 
         public void observe()
@@ -122,7 +128,11 @@ namespace Bayesian_Inference
             this.isDeclared = true;
         }
 
-        public Variable<bool> getRelated()
+        public Variable<bool> getPairScore()
+        {
+            return this.PairScore;
+        }
+        public Variable<int> getRelated()
         {
             return this.Related;
         }
