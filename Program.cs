@@ -154,6 +154,7 @@ namespace Bayesian_Inference
                 double[] probs_twoparent_set_10_or_01 = new double[] { B / (B + C), C / (B + C) };
                 double[] probs_twoparent_set_11 = new double[] { C / (C + D), D / (C + D) };
 
+                // relationship outcomes depending on the triple analysis - related is now split into related and same person
                 double[] probs_not_related = new double[] { 1.0, 0.0, 0.0 };
                 double[] probs_related = new double[] { 0.0, z, (1 - z) };
 
@@ -180,6 +181,9 @@ namespace Bayesian_Inference
                         {
                             Roots[current].SetTo(Variable.Discrete(probs_noparent));
                         }
+
+                        // setting the pairscores helps for when we need binary pair outcomes in the case where the triples have 1 or 2 parents
+                        // otherwise, setting the related distribution but with 3 outcomes instead of 2 like we were doing before
                         using (Variable.If(Roots[current] == 0))
                         {
                             current.getRelationships()[0].setPairScore(0);
@@ -258,11 +262,11 @@ namespace Bayesian_Inference
                     {
                         List<Relationship> parents = current.getParents();
                         Relationship parent = parents[0];
-                        using (Variable.IfNot(parent.getPairScore()))
+                        using (Variable.IfNot(parent.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
                         {
                             Roots[current].SetTo(Variable.Discrete(probs_oneparent_set_0));
                         }
-                        using (Variable.If(parent.getPairScore()))
+                        using (Variable.If(parent.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
                         {
                             Roots[current].SetTo(Variable.Discrete(probs_oneparent_set_1));
                         }
@@ -301,16 +305,16 @@ namespace Bayesian_Inference
                         List<Relationship> parents = current.getParents();
                         Relationship parent1 = parents[0];
                         Relationship parent2 = parents[1];
-                        using (Variable.IfNot(parent1.getPairScore()))
+                        using (Variable.IfNot(parent1.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
                         {
-                            using (Variable.IfNot(parent2.getPairScore()))
+                            using (Variable.IfNot(parent2.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
                                     Roots[current].SetTo(Variable.Discrete(probs_twoparent_set_00));
                                 }
                             }
-                            using (Variable.If(parent2.getPairScore()))
+                            using (Variable.If(parent2.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
@@ -318,16 +322,16 @@ namespace Bayesian_Inference
                                 }
                             }
                         }
-                        using (Variable.If(parent1.getPairScore()))
+                        using (Variable.If(parent1.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
                         {
-                            using (Variable.IfNot(parent2.getPairScore()))
+                            using (Variable.IfNot(parent2.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
                                     Roots[current].SetTo(Variable.Discrete(probs_twoparent_set_10_or_01));
                                 }
                             }
-                            using (Variable.If(parent2.getPairScore()))
+                            using (Variable.If(parent2.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
