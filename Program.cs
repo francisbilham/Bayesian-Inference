@@ -18,36 +18,48 @@ namespace Bayesian_Inference
             void Run()
             {
                 /////////////////////////////////////////// LOADING IN NETWORK DATA ///////////////////////////////
-                Person JR = new Person("Joe Rokocoko");
-                Person JsR = new Person("Josevata Rokocoko");
-                Person SS = new Person("Sitiveni Sivivatu");
-                Person JV = new Person("Joeli Vidiri");
+                Person JW = new Person("John Wilson");
+                Person AJW = new Person("Adam John Wirihana");
+                Person KWW = new Person("Koro Wipaaka Wilson");
+                Person KWPW = new Person("Koro Wi Paaka Wilson");
+                Person KDW = new Person("Kiri Dawn Wirihana");
+                Person HTWTM = new Person("Horina Tutaki Wharemate Te Moa");
+                Person FB = new Person("Francis Bilham");
+                Person MS = new Person("Miyanda Siamoongwa");
 
                 List<Person> personList = new List<Person>()
                 {
-                    JR,
-                    JsR,
-                    SS,
-                    JV
+                    JW,
+                    AJW,
+                    KWW,
+                    KWPW,
+                    KDW,
+                    HTWTM,
+                    FB,
+                    MS
                 };
 
                 List<Person> p1 = new List<Person>();
-                p1.Add(JR);
-                p1.Add(SS);
+                p1.Add(JW);
+                p1.Add(KWW);
                 List<Person> p2 = new List<Person>();
-                p2.Add(JR);
-                p2.Add(JV);
+                p2.Add(JW);
+                p2.Add(KWPW);
                 List<Person> st1 = new List<Person>();
-                st1.Add(JsR);
-                st1.Add(SS);
+                st1.Add(AJW);
+                st1.Add(HTWTM);
                 List<Person> st2 = new List<Person>();
-                st2.Add(JsR);
-                st2.Add(JV);
+                st2.Add(KDW);
+                st2.Add(HTWTM);
+                List<Person> p3 = new List<Person>();
+                p3.Add(FB);
+                p3.Add(MS);
 
                 List<PanuiApplication> applicationList = new List<PanuiApplication>()
                 {
                     new PanuiApplication("1",p1),
-                    new PanuiApplication("2",p2)
+                    new PanuiApplication("2",p2),
+                    new PanuiApplication("3",p3)
                 };
 
                 List<ShareTransfer> transferList = new List<ShareTransfer>()
@@ -58,10 +70,14 @@ namespace Bayesian_Inference
 
                 List<Name> nameList = new List<Name>()
                 {
-                    new Name("Joe Rokocoko"),
-                    new Name("Josevata Rokocoko"),
-                    new Name("Sitiveni Sivivatu"),
-                    new Name("Joeli Vidiri")
+                    new Name("John Wilson"),
+                    new Name("Adam John Wirihana"),
+                    new Name("Koro Wipaaka Wilson"),
+                    new Name("Koro Wi Paaka Wilson"),
+                    new Name("Kiri Dawn Wirihana"),
+                    new Name("Horina Tutaki Wharemate Te Moa"),
+                    new Name("Francis Bilham"),
+                    new Name("Miyanda Siamoongwa")
                 };
 
                 // add Panui Applications to each person
@@ -139,7 +155,7 @@ namespace Bayesian_Inference
 
                 double p = 0.05; // prior probability for any pair being related
                 double q = 0.8; // setting to 1.0 means that 12 related and 13 related implies 23 related, setting to prior_prob_of_pair_related means that 12 / 13 related are independent of 23 related
-                double z = 0.7; // prior probability of a pair being related (not the same person) given that they are related from triple analysis
+                double z = 0.9; // prior probability of a pair being related (not the same person) given that they are related from triple analysis
 
                 // a bunch of maths that relates to a 3 circle Venn diagram to compute the probability of the 8 outcomes for three relationships
                 double D = p * p * q;
@@ -182,79 +198,53 @@ namespace Bayesian_Inference
                             Roots[current].SetTo(Variable.Discrete(probs_noparent));
                         }
 
-                        // setting the pairscores helps for when we need binary pair outcomes in the case where the triples have 1 or 2 parents
-                        // otherwise, setting the related distribution but with 3 outcomes instead of 2 like we were doing before
                         using (Variable.If(Roots[current] == 0))
                         {
                             current.getRelationships()[0].setPairScore(0);
                             current.getRelationships()[1].setPairScore(0);
                             current.getRelationships()[2].setPairScore(0);
-                            //current.getRelationships()[0].setRelated(probs_not_related);
-                            //current.getRelationships()[1].setRelated(probs_not_related);
-                            //current.getRelationships()[2].setRelated(probs_not_related);
                         }
                         using (Variable.If(Roots[current] == 1))
                         {
                             current.getRelationships()[0].setPairScore(1);
                             current.getRelationships()[1].setPairScore(0);
                             current.getRelationships()[2].setPairScore(0);
-                            //current.getRelationships()[0].setRelated(probs_related);
-                            //current.getRelationships()[1].setRelated(probs_not_related);
-                            //current.getRelationships()[2].setRelated(probs_not_related);
                         }
                         using (Variable.If(Roots[current] == 2))
                         {
                             current.getRelationships()[0].setPairScore(0);
                             current.getRelationships()[1].setPairScore(1);
                             current.getRelationships()[2].setPairScore(0);
-                            //current.getRelationships()[0].setRelated(probs_not_related);
-                            //current.getRelationships()[1].setRelated(probs_related);
-                            //current.getRelationships()[2].setRelated(probs_not_related);
                         }
                         using (Variable.If(Roots[current] == 3))
                         {
                             current.getRelationships()[0].setPairScore(0);
                             current.getRelationships()[1].setPairScore(0);
                             current.getRelationships()[2].setPairScore(1);
-                            //current.getRelationships()[0].setRelated(probs_not_related);
-                            //current.getRelationships()[1].setRelated(probs_not_related);
-                            //current.getRelationships()[2].setRelated(probs_related);
                         }
                         using (Variable.If(Roots[current] == 4))
                         {
                             current.getRelationships()[0].setPairScore(1);
                             current.getRelationships()[1].setPairScore(1);
                             current.getRelationships()[2].setPairScore(0);
-                            //current.getRelationships()[0].setRelated(probs_related);
-                            //current.getRelationships()[1].setRelated(probs_related);
-                            //current.getRelationships()[2].setRelated(probs_not_related);
                         }
                         using (Variable.If(Roots[current] == 5))
                         {
                             current.getRelationships()[0].setPairScore(1);
                             current.getRelationships()[1].setPairScore(0);
                             current.getRelationships()[2].setPairScore(1);
-                            //current.getRelationships()[0].setRelated(probs_related);
-                            //current.getRelationships()[1].setRelated(probs_not_related);
-                            //current.getRelationships()[2].setRelated(probs_related);
                         }
                         using (Variable.If(Roots[current] == 6))
                         {
                             current.getRelationships()[0].setPairScore(0);
                             current.getRelationships()[1].setPairScore(1);
                             current.getRelationships()[2].setPairScore(1);
-                            //current.getRelationships()[0].setRelated(probs_not_related);
-                            //current.getRelationships()[1].setRelated(probs_related);
-                            //current.getRelationships()[2].setRelated(probs_related);
                         }
                         using (Variable.If(Roots[current] == 7))
                         {
                             current.getRelationships()[0].setPairScore(1);
                             current.getRelationships()[1].setPairScore(1);
                             current.getRelationships()[2].setPairScore(1);
-                            //current.getRelationships()[0].setRelated(probs_related);
-                            //current.getRelationships()[1].setRelated(probs_related);
-                            //current.getRelationships()[2].setRelated(probs_related);
                         }
 
                     }
@@ -262,11 +252,11 @@ namespace Bayesian_Inference
                     {
                         List<Relationship> parents = current.getParents();
                         Relationship parent = parents[0];
-                        using (Variable.IfNot(parent.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
+                        using (Variable.IfNot(parent.getPairScore())) 
                         {
                             Roots[current].SetTo(Variable.Discrete(probs_oneparent_set_0));
                         }
-                        using (Variable.If(parent.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
+                        using (Variable.If(parent.getPairScore())) 
                         {
                             Roots[current].SetTo(Variable.Discrete(probs_oneparent_set_1));
                         }
@@ -275,29 +265,21 @@ namespace Bayesian_Inference
                         {
                             current.getChildren()[0].setPairScore(0);
                             current.getChildren()[1].setPairScore(0);
-                            //current.getChildren()[0].setRelated(probs_not_related);
-                            //current.getChildren()[1].setRelated(probs_not_related);
                         }
                         using (Variable.If(Roots[current] == 1))
                         {
                             current.getChildren()[0].setPairScore(1);
                             current.getChildren()[1].setPairScore(0);
-                            //current.getChildren()[0].setRelated(probs_related);
-                            //current.getChildren()[1].setRelated(probs_not_related);
                         }
                         using (Variable.If(Roots[current] == 2))
                         {
                             current.getChildren()[0].setPairScore(0);
                             current.getChildren()[1].setPairScore(1);
-                            //current.getChildren()[0].setRelated(probs_not_related);
-                            //current.getChildren()[1].setRelated(probs_related);
                         }
                         using (Variable.If(Roots[current] == 3))
                         {
                             current.getChildren()[0].setPairScore(1);
                             current.getChildren()[1].setPairScore(1);
-                            //current.getChildren()[0].setRelated(probs_related);
-                            //current.getChildren()[1].setRelated(probs_related);
                         }
                     }
                     if (current.nParents() == 2)
@@ -305,16 +287,16 @@ namespace Bayesian_Inference
                         List<Relationship> parents = current.getParents();
                         Relationship parent1 = parents[0];
                         Relationship parent2 = parents[1];
-                        using (Variable.IfNot(parent1.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
+                        using (Variable.IfNot(parent1.getPairScore())) 
                         {
-                            using (Variable.IfNot(parent2.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
+                            using (Variable.IfNot(parent2.getPairScore())) 
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
                                     Roots[current].SetTo(Variable.Discrete(probs_twoparent_set_00));
                                 }
                             }
-                            using (Variable.If(parent2.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
+                            using (Variable.If(parent2.getPairScore())) 
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
@@ -322,16 +304,16 @@ namespace Bayesian_Inference
                                 }
                             }
                         }
-                        using (Variable.If(parent1.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
+                        using (Variable.If(parent1.getPairScore())) 
                         {
-                            using (Variable.IfNot(parent2.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
+                            using (Variable.IfNot(parent2.getPairScore())) 
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
                                     Roots[current].SetTo(Variable.Discrete(probs_twoparent_set_10_or_01));
                                 }
                             }
-                            using (Variable.If(parent2.getPairScore())) // need the pairscore here, using related == 0 and related != 0 didn't work for whatever reason
+                            using (Variable.If(parent2.getPairScore())) 
                             {
                                 if (Roots[current].IsDefined == false)
                                 {
@@ -342,12 +324,10 @@ namespace Bayesian_Inference
                         using (Variable.If(Roots[current] == 0))
                         {
                             current.getChildren()[0].setPairScore(0);
-                            //current.getChildren()[0].setRelated(probs_not_related);
                         }
                         using (Variable.If(Roots[current] == 1))
                         {
                             current.getChildren()[0].setPairScore(1);
-                            //current.getChildren()[0].setRelated(probs_related);
                         }
                     }
                     current.declareChildren();
@@ -369,27 +349,22 @@ namespace Bayesian_Inference
                     {
                         relationshipList[i].setPanui(0.05);
                         relationshipList[i].setShareTrans(0.01);
-                        relationshipList[i].setvNameScore(0.00001, 8.0);
-                        //relationshipList[i].setPairScore(0.0);
+                        relationshipList[i].setvNameScore(3.0, 20.0);
                     }
                     using (Variable.If(relationshipList[i].getRelated() == 1)) // related
                     {
                         relationshipList[i].setPanui(0.7);
                         relationshipList[i].setShareTrans(0.8);
                         relationshipList[i].setvNameScore(4.0, 8.0);
-                        //relationshipList[i].setPairScore(0.8);
                     }
                     using (Variable.If(relationshipList[i].getRelated() == 2)) // same person
                     {
                         relationshipList[i].setPanui(0.0);
                         relationshipList[i].setShareTrans(0.0);
                         relationshipList[i].setvNameScore(16.0, 8.0);
-                        //relationshipList[i].setPairScore(0.8);
                     }
                     relationshipList[i].observe();
                 }
-
-
 
                 InferenceEngine ie = new InferenceEngine();
                 //ie.ShowFactorGraph = true;
